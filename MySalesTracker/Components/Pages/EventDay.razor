@@ -1,0 +1,191 @@
+﻿@page "/day/{id:int}"
+
+<h2>Ден на събитие</h2>
+
+@if (day is null)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <p><a href="/events">← Събития</a> | @day.Event.Name — @day.Date</p>
+
+    <div class="mb-2 d-flex gap-2 flex-wrap align-items-center">
+        <select @bind="productId" @bind:after="OnProductChanged" class="form-select" style="width: 16rem">
+            <option value="">Продукт…</option>
+            @foreach (var p in products)
+            {
+                <option value="@p.ProductId">@p.Name</option>
+            }
+        </select>
+
+        @if (selectedProduct?.Brand == Brand.Ceramics)
+        {
+            <!-- Use text + inputmode=decimal to reliably show decimal keypad on mobile (iOS/Android) -->
+            <input type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
+                   placeholder="Цена…" class="form-control" style="width: 10rem"
+                   @bind="priceText" @bind:event="oninput" />
+        }
+        else
+        {
+            <select @bind="price" @bind:after="OnPriceChanged" class="form-select" style="width: 10rem">
+                <option value="">Цена…</option>
+                @foreach (var r in priceOptions)
+                {
+                    <option value="@r.Price">@r.Price</option>
+                }
+            </select>
+        }
+
+        <!-- Discount input -->
+        <input type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
+               placeholder="Отстъпка…" class="form-control" style="width: 10rem"
+               @bind="discountText" @bind:event="oninput" />
+
+        <input type="number" inputmode="numeric" step="1" @bind="qty" class="form-control" style="width: 6rem" />
+        <button class="btn btn-primary" @onclick="Add">Добави</button>
+    </div>
+
+    @foreach (var brand in brandOrder)
+    {
+        var lines = sales.Where(s => s.Product.Brand == brand).ToList();
+        if (lines.Count == 0)
+        {
+            continue;
+        }
+        var total = lines.Sum(x => x.UnitPrice);
+        <h4 class="mt-4">@brand.GetDisplayName()</h4>
+        <table class="table table-sm align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="px-3">Час</th>
+                    <th class="px-3">Продукт</th>
+                    <th class="px-3">бр.</th>
+                    <th class="px-3">Цена</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in lines)
+                {
+                    <tr>
+                        <td class="px-3">@s.CreatedUtc.ToLocalTime().ToString("dd dddd HH:mm", Bg)</td>
+                        <td class="px-3">@s.Product.Name</td>
+                        <td class="px-3">@s.QuantityUnits</td>
+                        <td class="px-3">@s.UnitPrice.ToString("0.00")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td class="px-3 fw-bold" colspan="3">Общо @brand.GetDisplayName():</td>
+                    <td class="px-3 fw-bold">@total.ToString("0.00")</td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+}
+
+@code {
+    [Parameter] public int id { get; set; }
+    MySalesTracker.Data.Models.EventDay? day;
+    List<Product> products = new();
+    List<PriceRule> priceOptions = new();
+    List<Sale> sales = new();
+
+    // Render order of brand tables
+    Brand[] brandOrder = new[] { Brand.Totem, Brand.Ceramics, Brand.Candles };
+
+    int? productId;
+    decimal? price;
+    string? priceText;    // manual price input (ceramics)
+    string? discountText; // manual discount input (all brands)
+    int qty = 1;
+
+    // Bulgarian culture for date/time formatting
+    static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+
+    Product? selectedProduct => products.FirstOrDefault(p => p.ProductId == productId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        day = await DbContext.EventDays.Include(x => x.Event).FirstOrDefaultAsync(x => x.EventDayId == id);
+        products = await DbContext.Products.Where(p => p.IsActive).OrderBy(p => p.Name).ToListAsync();
+        sales = await DbContext.Sale.Include(x => x.Product).Where(s => s.EventDayId == id).OrderByDescending(x => x.SaleId).ToListAsync();
+    }
+
+    async Task OnProductChanged()
+    {
+        if (selectedProduct?.Brand == Brand.Ceramics)
+        {
+            priceOptions.Clear();
+            price = null; priceText = null; // force manual entry
+            qty = 1;                        // no rules => default 1
+        }
+        else
+        {
+            priceOptions = productId is null
+                ? new()
+                : await DbContext.PriceRules.Where(r => r.ProductId == productId).OrderBy(r => r.SortOrder).ToListAsync();
+            price = null; priceText = null; qty = 1;
+        }
+        StateHasChanged();
+    }
+
+    async Task Add()
+    {
+        if (productId is null || day is null) return;
+
+        // Ensure price is set (parse string for ceramics)
+        if (selectedProduct?.Brand == Brand.Ceramics)
+        {
+            if (!decimal.TryParse(priceText, NumberStyles.Number, CultureInfo.CurrentCulture, out var parsedPrice)) return;
+            price = parsedPrice;
+        }
+        if (price is null) return;
+
+        // Parse discount amount (optional)
+        var discount = decimal.TryParse(discountText, NumberStyles.Number, CultureInfo.CurrentCulture, out var parsedDiscount)
+            ? parsedDiscount
+            : 0m;
+
+        var units = selectedProduct?.Brand == Brand.Ceramics
+            ? 1
+            : await new PriceRuleService(DbContext).GetUnitsForAsync(productId.Value, price.Value, day.Date);
+
+        var s = new Sale
+        {
+            EventDayId = day.EventDayId,
+            ProductId = productId.Value,
+            UnitPrice = price.Value,
+            QuantityUnits = units,
+            DiscountValue = discount,
+            CreatedUtc = DateTime.UtcNow
+        };
+
+        DbContext.Sale.Add(s);
+        await DbContext.SaveChangesAsync();
+        sales.Insert(0, await DbContext.Sale.Include(x => x.Product).FirstAsync(x => x.SaleId== s.SaleId));
+
+        // Reset quick inputs but keep current product selection
+        price = null; priceText = null; discountText = null; qty = 1;
+        await OnProductChanged(); // repopulate priceOptions for thecurrently selected product
+    }
+
+    private async Task OnPriceChanged()
+    {
+        if (productId is null || day is null) return;
+        if (selectedProduct?.Brand == Brand.Ceramics)
+        {
+            // Parse typed price using current culture
+            price = decimal.TryParse(priceText, NumberStyles.Number, CultureInfo.CurrentCulture, out var parsed)
+                ? parsed
+                : null;
+            qty = 1;
+        }
+        else if (price is not null)
+        {
+            qty = await new PriceRuleService(DbContext).GetUnitsForAsync(productId.Value, price.Value, day.Date);
+        }
+        StateHasChanged();
+    }
+}

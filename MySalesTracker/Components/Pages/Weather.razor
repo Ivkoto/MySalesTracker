@@ -1,0 +1,141 @@
+﻿@page "/weather"
+
+<h2>Дали вали?</h2>
+
+<div class="mb-3 d-flex gap-2 flex-wrap align-items-center">
+    <input class="form-control" style="width: 18rem" placeholder="Град (напр. София)" @bind="city" />
+    <select class="form-select" style="width: 8rem" @bind="displayHours">
+        <option value="12">12 ч.</option>
+        <option value="24">24 ч.</option>
+        <option value="48">48 ч.</option>
+    </select>
+    <button class="btn btn-primary" @onclick="Load">Провери</button>
+</div>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (summary is not null)
+{
+    <div class="card p-3">
+        <div><b>Локация:</b> @summary.Name (@summary.Lat, @summary.Lon)</div>
+        <div class="mt-2">
+            <b>Следващи @displayHours часа:</b>
+            <div class="hour-grid mt-2">
+                @foreach (var e in summary.Items)
+                {
+                    var bg = GetTempBg(e.temp);
+                    var edge = GetTempEdge(e.temp);
+                    <div class="hour-card" style="background-color:@bg; border-color:@edge">
+                        <div class="hour-time">@e.display</div>
+                        <div class="hour-values">
+                            <span class="me-2">@e.temp.ToString("0.#")°C</span>
+                            <span>вятър @e.wind.ToString("0.#") км/ч</span>
+                        </div>
+                        <div class="hour-rain">шанс @e.prob% (@e.mm.ToString("0.0") мм)</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    string city = "София";
+    string? error;
+
+    static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+
+    int displayHours = 12;
+
+    record Entry(string display, double temp, double wind, int prob, double mm);
+    record Summary(string Name, double Lat, double Lon, List<Entry> Items);
+
+    Summary? summary;
+
+    protected override void OnInitialized()
+    {
+        // Restore state on navigation within the same tab
+        city = State.City;
+        displayHours = State.DisplayHours;
+        if (State.LastSummary is not null)
+        {
+            summary = new Summary(State.LastSummary.Name, State.LastSummary.Lat, State.LastSummary.Lon,
+                State.LastSummary.Items.Select(x => new Entry(x.Display, x.Temp, x.Wind, x.Prob, x.Mm)).ToList());
+        }
+    }
+
+    async Task Load()
+    {
+        error = null; summary = null;
+        State.City = city;
+        State.DisplayHours = displayHours;
+
+        var geo = await WeatherSvc.GeocodeAsync(city);
+        if (geo is null) { error = "Не е намерен град."; return; }
+        var (lat, lon, name) = geo.Value;
+        var fc = await WeatherSvc.GetForecastAsync(lat, lon);
+        var h = fc?.Hourly;
+        if (h?.Time is null || h.Precipitation_Probability is null || h.Precipitation is null || h.Temperature_2m is null || h.Wind_Speed_10m is null)
+        { error = "Няма данни."; return; }
+
+        var count = Math.Min(displayHours, h.Time.Count);
+        var list = new List<Entry>(capacity: count);
+        for (int i = 0; i < count; i++)
+        {
+            var t = h.Time[i];
+            var prob = i < h.Precipitation_Probability.Count ? h.Precipitation_Probability[i] : 0;
+            var mm = i < h.Precipitation.Count ? h.Precipitation[i] : 0;
+            var temp = i < h.Temperature_2m.Count ? h.Temperature_2m[i] : 0;
+            var wind = i < h.Wind_Speed_10m.Count ? h.Wind_Speed_10m[i] : 0;
+
+            // Format like "20 Петък 12:00" using Bulgarian culture
+            if (DateTime.TryParse(t, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+            {
+                var disp = dt.ToString("dd dddd HH:mm", Bg);
+                list.Add(new Entry(disp, temp, wind, prob, mm));
+            }
+            else
+            {
+                list.Add(new Entry(t, temp, wind, prob, mm));
+            }
+        }
+        summary = new Summary(name ?? city, lat, lon, list);
+        // Store for future navigations
+        State.Store(new WeatherState.Summary(summary.Name, summary.Lat, summary.Lon,
+            summary.Items.Select(x => new WeatherState.Entry(x.display, x.temp, x.wind, x.prob, x.mm)).ToList()));
+    }
+
+    // Map temperature (°C) to a hue path: blue (cold) → yellow (mid) → red (hot)
+    const double MinTemp = -20; // °C
+    const double MidTemp = 20;  // °C (yellow)
+    const double MaxTemp = 40;  // °C
+
+    static double Clamp01(double v) => v < 0 ? 0 : (v > 1 ? 1 : v);
+    static double Lerp(double a, double b, double t) => a + (b - a) * t;
+
+    static int HueFor(double temp)
+    {
+        var t = Clamp01((temp - MinTemp) / (MaxTemp - MinTemp));
+        var m = Clamp01((MidTemp - MinTemp) / (MaxTemp - MinTemp));
+        double hue;
+        if (t <= m)
+        {
+            // 220 (blue) → 60 (yellow)
+            var frac = m == 0 ? 0 : t / m;
+            hue = Lerp(220, 60, frac);
+        }
+        else
+        {
+            // 60 (yellow) → 0 (red)
+            var frac = (1 - m) == 0 ? 1 : (t - m) / (1 - m);
+            hue = Lerp(60, 0, frac);
+        }
+        return (int)Math.Round(hue);
+    }
+
+    static string GetTempBg(double temp) => $"hsla({HueFor(temp)}, 90%, 50%, 0.3)";
+    static string GetTempEdge(double temp) => $"hsl({HueFor(temp)}, 60%, 40%)";
+}

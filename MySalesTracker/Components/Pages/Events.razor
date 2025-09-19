@@ -1,0 +1,50 @@
+﻿@page "/events"
+
+<h2>Събития</h2>
+
+<div class="mb-3">
+    <input @bind="name" placeholder="Име" />
+    <input type="date" @bind="start" />
+    <input type="date" @bind="end" />
+    <button @onclick="Create">Създай</button>
+</div>
+
+<ul>
+    @foreach (var b in events)
+    {
+        <li>
+            <b>@b.Name</b> (@b.StartDate → @b.EndDate)
+            <ul>
+                @foreach (var d in b.Days.OrderBy(x => x.Date))
+                {
+                    <li><a href="@($"/day/{d.EventDayId}")">@d.Date</a></li>
+                }
+            </ul>
+        </li>
+    }
+</ul>
+
+@code {
+    string name = $"Базар {DateOnly.FromDateTime(DateTime.Today)}";
+    DateOnly start = DateOnly.FromDateTime(DateTime.Today);
+    DateOnly end = DateOnly.FromDateTime(DateTime.Today);
+    List<MySalesTracker.Data.Models.Event> events = new();
+
+    protected override async Task OnInitializedAsync()
+        => events = await DbContext.Events.Include(x => x.Days).OrderByDescending(x => x.EventId).ToListAsync();
+
+    async Task Create()
+    {
+        if (end < start) end = start;
+
+        var b = new MySalesTracker.Data.Models.Event { Name = name, StartDate = start, EndDate = end };
+
+        for (var d = start; d <= end; d = d.AddDays(1))
+            b.Days.Add(new MySalesTracker.Data.Models.EventDay { Date = d });
+
+        DbContext.Events.Add(b);
+
+        await DbContext.SaveChangesAsync();
+        await OnInitializedAsync();
+    }
+}

@@ -1,0 +1,46 @@
+# .gitignore for MySalesTracker (.NET, Blazor, EF Core)
+
+# Build results
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+
+# Rider
+.idea/
+*.sln.iml
+
+# NuGet
+*.nupkg
+# NuGet Packages folder
+packages/
+# NuGet Symbol Packages
+*.snupkg
+
+# Entity Framework Migrations
+MySalesTracker.Data/Migrations/*Designer.cs
+MySalesTracker.Data/Migrations/*Snapshot.cs
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Others
+*.vspscc
+*.vssscc
+
+# Ignore secrets/configs (if any)
+appsettings.*.local.json
+ 
+# VS cache 
+.vs/

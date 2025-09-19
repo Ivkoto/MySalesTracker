@@ -1,0 +1,23 @@
+.hour-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.hour-card {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px 12px;
+  /* Visual enhancement with backdrop saturation; include WebKit prefix for Safari */
+  -webkit-backdrop-filter: saturate(120%);
+  backdrop-filter: saturate(120%);
+}
+.hour-time {
+  font-weight: 600;
+}
+.hour-values {
+  font-size: 0.9rem;
+}
+.hour-rain {
+  font-size: 1.00rem;
+  font-weight: 600;
+}

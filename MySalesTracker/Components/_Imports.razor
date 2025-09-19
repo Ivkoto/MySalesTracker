@@ -1,0 +1,20 @@
+﻿@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Globalization
+@using System.Diagnostics
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using MySalesTracker
+@using MySalesTracker.Components
+@using MySalesTracker.Data
+@using MySalesTracker.Data.Models
+@using MySalesTracker.Services
+
+@inject MySalesTracker.Data.AppDbContext DbContext
+@inject MySalesTracker.Services.WeatherService WeatherSvc
+@inject MySalesTracker.Services.WeatherState State
