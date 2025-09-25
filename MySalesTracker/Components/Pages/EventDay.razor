@@ -1,4 +1,4 @@
-﻿@page "/day/{id:int}"
+@page "/day/{id:int}"
 
 <h2>Ден на събитие</h2>
 
@@ -8,10 +8,10 @@
 }
 else
 {
-    <p><a href="/events">← Събития</a> | @day.Event.Name — @day.Date</p>
+    <p><a href="/events">↪ Събития</a> | @day.Event.Name - @day.Date.ToDateTime(TimeOnly.MinValue).ToString("dd.MM dddd", Bg)</p>
 
-    <div class="mb-2 d-flex gap-2 flex-wrap align-items-center">
-        <select @bind="productId" @bind:after="OnProductChanged" class="form-select" style="width: 16rem">
+    <div class="mb-2 d-flex gap-3 flex-wrap align-items-center">
+        <select @bind="productId" @bind:after="OnProductChanged" class="form-select" style="width: 16.5rem">
             <option value="">Продукт…</option>
             @foreach (var p in products)
             {
@@ -28,7 +28,7 @@ else
         }
         else
         {
-            <select @bind="price" @bind:after="OnPriceChanged" class="form-select" style="width: 10rem">
+            <select @bind="price" @bind:after="OnPriceChanged" class="form-select" style="width: 8rem">
                 <option value="">Цена…</option>
                 @foreach (var r in priceOptions)
                 {
@@ -39,11 +39,10 @@ else
 
         <!-- Discount input -->
         <input type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
-               placeholder="Отстъпка…" class="form-control" style="width: 10rem"
+               placeholder="Отстъпка…" class="form-control" style="width: 8rem"
                @bind="discountText" @bind:event="oninput" />
 
-        <input type="number" inputmode="numeric" step="1" @bind="qty" class="form-control" style="width: 6rem" />
-        <button class="btn btn-primary" @onclick="Add">Добави</button>
+        <button class="btn btn-primary" style="width: 8rem; height: 2.75rem" @onclick="Add">Добави</button>
     </div>
 
     @foreach (var brand in brandOrder)
@@ -68,7 +67,7 @@ else
                 @foreach (var s in lines)
                 {
                     <tr>
-                        <td class="px-3">@s.CreatedUtc.ToLocalTime().ToString("dd dddd HH:mm", Bg)</td>
+                        <td class="px-3">@s.CreatedUtc.ToLocalTime().ToString("HH:mm", Bg)</td>
                         <td class="px-3">@s.Product.Name</td>
                         <td class="px-3">@s.QuantityUnits</td>
                         <td class="px-3">@s.UnitPrice.ToString("0.00")</td>
