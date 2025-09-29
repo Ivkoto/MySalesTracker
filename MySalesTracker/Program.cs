@@ -33,7 +33,6 @@ using (var scope = app.Services.CreateScope())
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // default HSTS value is 30 days. Change this for production scenarios https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
