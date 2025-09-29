@@ -16,7 +16,6 @@ public class Event
     [Column(TypeName = "date")]
     public DateOnly EndDate { get; set; }
 
-
     public ICollection<EventDay> Days { get; set; } = [];
 }
 
