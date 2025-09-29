@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Reflection.Metadata;
 
 namespace MySalesTracker.Data.Models;
 public class Event
@@ -11,7 +10,7 @@ public class Event
     [StringLength(50)]
     public string Name { get; set; } = null!;
 
-    [Column(TypeName ="date")]
+    [Column(TypeName = "date")]
     public DateOnly StartDate { get; set; }
 
     [Column(TypeName = "date")]
