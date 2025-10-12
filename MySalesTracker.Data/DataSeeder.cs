@@ -23,6 +23,8 @@ public static class DataSeeder
 
         context.AddRange(pBandana, pGlove, pCandle, pMatches, pBags, pCeramic);
 
+        var effectiveFrom = new DateOnly(2020, 1, 1);
+
         // Candles (Gora brand): 19→1, 29→1, 38→2, 57→3
         context.PriceRules.AddRange(
             PR(pCandle, 19.00m, 1, 1), PR(pCandle, 29.00m, 1, 2),
@@ -59,6 +61,6 @@ public static class DataSeeder
         await context.SaveChangesAsync();
 
         static PriceRule PR(Product p, decimal price, int units, int sort)
-            => new() { Product = p, Price = price, UnitsPerSale = units, SortOrder = sort };
+            => new() { Product = p, Price = price, UnitsPerSale = units, SortOrder = sort, EffectiveFrom = new DateOnly(2020, 1, 1)};
     }
 }

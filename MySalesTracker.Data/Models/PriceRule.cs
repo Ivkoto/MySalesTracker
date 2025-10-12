@@ -3,21 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MySalesTracker.Data.Models;
 
-public class Product
-{
-    [Key]
-    public int ProductId { get; set; }
-
-    [StringLength(50)]
-    public string Name { get; set; } = null!;
-
-    public Brand Brand { get; set; }
-
-    public bool IsActive { get; set; } = true;
-
-    public ICollection<PriceRule> PriceRules { get; set; } = [];
-}
-
 public class PriceRule
 {
     [Key]
@@ -34,8 +19,10 @@ public class PriceRule
     public int SortOrder { get; set; }
 
     public Product Product { get; set; } = null!;
+
     [Column(TypeName = "date")]
     public DateOnly EffectiveFrom { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+
     [Column(TypeName = "date")]
     public DateOnly? EffectiveTo { get; set; }
 }

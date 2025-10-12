@@ -35,20 +35,23 @@
     List<MySalesTracker.Data.Models.Event> events = new();
 
     protected override async Task OnInitializedAsync()
-        => events = await DbContext.Events.Include(x => x.Days).OrderByDescending(x => x.EventId).ToListAsync();
+        => events = await EventSvc.GetAllEventsAsync();
 
     async Task Create()
     {
         if (end < start) end = start;
 
-        var b = new MySalesTracker.Data.Models.Event { Name = name, StartDate = start, EndDate = end };
+        var newEvent = await EventSvc.CreateEventAsync(name, start, end);
+        events.Insert(0, newEvent); // Add to top of list
 
-        for (var d = start; d <= end; d = d.AddDays(1))
-            b.Days.Add(new MySalesTracker.Data.Models.EventDay { Date = d });
-
-        DbContext.Events.Add(b);
-
-        await DbContext.SaveChangesAsync();
-        await OnInitializedAsync();
+        /*TODO: @IvayloK - replace the lines above if you need to reload all the events and keep the data updated on all the devices
+        in cases where other users might have created events simultaneously*/
+        //await EventSvc.CreateEventAsync(name, start, end);
+        //events = await EventSvc.GetAllEventsAsync(); // Reload all events
+        
+        // Reset form
+        name = $"Базар {DateOnly.FromDateTime(DateTime.Today)}";
+        start = DateOnly.FromDateTime(DateTime.Today);
+        end = DateOnly.FromDateTime(DateTime.Today);
     }
 }
