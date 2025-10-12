@@ -103,7 +103,6 @@ else
     MySalesTracker.Data.Models.EventDay? day;
     List<Product> products = new();
     List<PriceRule> priceOptions = new();
-    List<Sale> sales = new();
     List<BrandSalesSummary> brandSummaries = new();
     HubConnection? hubConnection;
 
@@ -275,7 +274,6 @@ else
     async Task ReloadSalesAsync()
     {
         brandSummaries = await SaleSvc.GetBrandSalesSummariesAsync(id);
-        sales = await SaleSvc.GetSalesByEventDayAsync(id);
     }
 
     async Task EnsureHubConnectionAsync()

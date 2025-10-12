@@ -36,7 +36,7 @@ public class PriceRuleService
 
             if (priceRule is null)
             {
-                _logger.LogWarning($"No price rule found for Product {productId}, Price {price}, Date {onDate}. Defaulting to 1 unit per sale.");
+                _logger.LogWarning("No price rule found for Product {ProductId}, Price {Price}, Date {OnDate}. Defaulting to 1 unit per sale.", productId, price, onDate);
                 return new UnitsPerSale(1, null);
             }
 

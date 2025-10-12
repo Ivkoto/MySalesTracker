@@ -111,9 +111,9 @@ public class SaleService
         {
             await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
-            var summaries = await context.Sale
-                .Include(s => s.Product)
-                .Where(s => s.EventDayId == eventDayId)
+            var sales = await GetSalesByEventDayAsync(eventDayId, cancellationToken);
+
+            var summaries = sales
                 .GroupBy(s => s.Product.Brand)
                 .Select(g => new BrandSalesSummary
                 {
@@ -121,19 +121,11 @@ public class SaleService
                     TotalPrice = g.Sum(s => s.Price),
                     TotalDiscount = g.Sum(s => s.DiscountValue),
                     TotalQuantityUnits = g.Sum(s => s.QuantityUnits),
-                    SalesCount = g.Count()
+                    SalesCount = g.Count(),
+                    Sales = g.OrderByDescending(s => s.SaleId).ToList()
                 })
                 .OrderByDescending(bss => bss.Brand)
-                .ToListAsync(cancellationToken);
-
-            foreach (var summary in summaries)
-            {
-                summary.Sales = await context.Sale
-                    .Include(s => s.Product)
-                    .Where(s => s.EventDayId == eventDayId && s.Product.Brand == summary.Brand)
-                    .OrderByDescending(s => s.SaleId)
-                    .ToListAsync(cancellationToken);
-            }
+                .ToList();
 
             _logger.LogInformation(
                 "Retrieved {BrandCount} brand summaries with {TotalSales} total sales for EventDay {EventDayId}",
