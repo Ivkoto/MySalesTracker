@@ -103,7 +103,7 @@ public class SaleService
     }
 
     /// <summary>
-    /// Gets brand sales summaries with pre-computed aggregates like totals, counds, etc... for an event day.
+    /// Gets brand sales summaries with pre-computed aggregates like totals, counts, etc... for an event day.
     /// </summary>
     public async Task<List<BrandSalesSummary>> GetBrandSalesSummariesAsync(int eventDayId, CancellationToken cancellationToken = default)
     {
