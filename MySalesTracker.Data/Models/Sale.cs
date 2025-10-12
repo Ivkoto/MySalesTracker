@@ -18,10 +18,12 @@ public class Sale
 
     [ForeignKey("PriceRule")]
     public int? PriceRuleId { get; set; }
+
     public PriceRule? PriceRule { get; set; }
 
     [Column(TypeName = "decimal(6,2)")]
-    public decimal UnitPrice { get; set; }
+    public decimal Price { get; set; }
+
     public int QuantityUnits { get; set; }
 
     [Column(TypeName = "decimal(6,2)")]
@@ -30,35 +32,4 @@ public class Sale
     public string? Notes { get; set; }
 
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
-}
-public class Expense
-{
-    [Key]
-    public int ExpenseId { get; set; }
-
-    [ForeignKey("EventDay")]
-    public int EventDayId { get; set; }
-    public EventDay EventDay { get; set; } = null!;
-
-    [StringLength(200)]
-    public string Type { get; set; } = null!;
-
-    [Column(TypeName = "decimal(6,2)")]
-    public decimal Amount { get; set; }
-
-    public string? Notes { get; set; }
-}
-public class Payment
-{
-    [Key]
-    public int PaymentId { get; set; }
-
-    [ForeignKey("EventDay")]
-    public int EventDayId { get; set; }
-    public EventDay EventDay { get; set; } = null!;
-
-    public PaymentMethod Method { get; set; }
-
-    [Column(TypeName = "decimal(6,2)")]
-    public decimal Amount { get; set; }
 }

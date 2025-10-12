@@ -1,5 +1,3 @@
-using System.Net.Http.Json;
-
 namespace MySalesTracker.Services;
 
 public sealed class WeatherService
@@ -11,21 +9,36 @@ public sealed class WeatherService
     {
         if (string.IsNullOrWhiteSpace(city)) return null;
         var url = $"https://geocoding-api.open-meteo.com/v1/search?name={Uri.EscapeDataString(city)}&count=1&language={language}";
-        var data = await _http.GetFromJsonAsync<GeocodeResponse>(url);
-        var first = data?.Results?.FirstOrDefault();
-        return first is null ? null : (first.Latitude, first.Longitude, first.Name);
+        try
+        {
+            var data = await _http.GetFromJsonAsync<GeocodeResponse>(url);
+            var first = data?.Results?.FirstOrDefault();
+            return first is null ? null : (first.Latitude, first.Longitude, first.Name);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     public async Task<ForecastResponse?> GetForecastAsync(double lat, double lon)
     {
         var url = $"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,wind_speed_10m,precipitation_probability,precipitation&temperature_unit=celsius&windspeed_unit=kmh&timezone=auto";
-        return await _http.GetFromJsonAsync<ForecastResponse>(url);
+        try
+        {
+            return await _http.GetFromJsonAsync<ForecastResponse>(url);
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
     }
 
     public sealed class GeocodeResponse
     {
         public List<GeocodeItem>? Results { get; set; }
     }
+
     public sealed class GeocodeItem
     {
         public required double Latitude { get; set; }
@@ -38,6 +51,7 @@ public sealed class WeatherService
     {
         public Hourly? Hourly { get; set; }
     }
+
     public sealed class Hourly
     {
         public List<string>? Time { get; set; }

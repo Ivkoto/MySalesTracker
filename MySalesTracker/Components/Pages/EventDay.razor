@@ -1,6 +1,6 @@
 @page "/day/{id:int}"
-
-<h2>Ден на събитие</h2>
+@implements IAsyncDisposable
+@inject NavigationManager Nav
 
 @if (day is null)
 {
@@ -8,7 +8,9 @@
 }
 else
 {
-    <p><a href="/events">↪ Събития</a> | @day.Event.Name - @day.Date.ToDateTime(TimeOnly.MinValue).ToString("dd.MM dddd", Bg)</p>
+    <h2>@day.Date.ToDateTime(TimeOnly.MinValue).ToString("dd.MM dddd", Bg)</h2>
+
+    <p><a href="/events">↪ Събития</a> | @day.Event.Name</p>
 
     <div class="mb-2 d-flex gap-3 flex-wrap align-items-center">
         <select @bind="productId" @bind:after="OnProductChanged" class="form-select" style="width: 16.5rem">
@@ -21,10 +23,10 @@ else
 
         @if (selectedProduct?.Brand == Brand.Ceramics)
         {
-            <!-- Use text + inputmode=decimal to reliably show decimal keypad on mobile (iOS/Android) -->
+            <!-- Use text + inputmode = decimal to reliably show decimal keypad on mobile (iOS/Android) -->
             <input type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
                    placeholder="Цена…" class="form-control" style="width: 10rem"
-                   @bind="priceText" @bind:event="oninput" />
+                   @bind="priceText" @bind:event="oninput" @bind:after="ClearValidationMessage" />
         }
         else
         {
@@ -40,20 +42,26 @@ else
         <!-- Discount input -->
         <input type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
                placeholder="Отстъпка…" class="form-control" style="width: 8rem"
-               @bind="discountText" @bind:event="oninput" />
+               @bind="discountText" @bind:event="oninput" @bind:after="ClearValidationMessage" />
 
-        <button class="btn btn-primary" style="width: 8rem; height: 2.75rem" @onclick="Add">Добави</button>
+        <!-- Note input -->
+        <input type="text" inputmode="text" enterkeyhint="done" autocomplete="off"
+               placeholder="Бележка…" class="form-control" style="width: 8rem"
+               @bind="note" @bind:event="oninput" />
+
+        <button class="btn btn-primary" style="width: 8rem; height: 2.75rem" @onclick="Add" disabled="@DisableAddButton">Добави</button>
     </div>
 
-    @foreach (var brand in brandOrder)
+    @if (!string.IsNullOrEmpty(validationMessage))
     {
-        var lines = sales.Where(s => s.Product.Brand == brand).ToList();
-        if (lines.Count == 0)
-        {
-            continue;
-        }
-        var total = lines.Sum(x => x.UnitPrice);
-        <h4 class="mt-4">@brand.GetDisplayName()</h4>
+        <div class="alert alert-warning py-2 px-3 mb-3">
+            @validationMessage
+        </div>
+    }
+
+    @foreach (var summary in brandSummaries)
+    {
+        <h4 class="mt-4">@summary.Brand.GetDisplayName()</h4>
         <table class="table table-sm align-middle">
             <thead class="table-light">
                 <tr>
@@ -61,23 +69,29 @@ else
                     <th class="px-3">Продукт</th>
                     <th class="px-3">бр.</th>
                     <th class="px-3">Цена</th>
+                    <th class="px-3">Отст.</th>
+                    <th class="px-3">Бележка</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var s in lines)
+                @foreach (var s in summary.Sales)
                 {
                     <tr>
                         <td class="px-3">@s.CreatedUtc.ToLocalTime().ToString("HH:mm", Bg)</td>
                         <td class="px-3">@s.Product.Name</td>
                         <td class="px-3">@s.QuantityUnits</td>
-                        <td class="px-3">@s.UnitPrice.ToString("0.00")</td>
+                        <td class="px-3">@s.Price.ToString("0.00")</td>
+                        <td class="px-3">@s.DiscountValue.ToString("0.00")</td>
+                        <td class="px-3">@s.Notes</td>
                     </tr>
                 }
             </tbody>
             <tfoot>
                 <tr>
-                    <td class="px-3 fw-bold" colspan="3">Общо @brand.GetDisplayName():</td>
-                    <td class="px-3 fw-bold">@total.ToString("0.00")</td>
+                    <td class="px-3 fw-bold" colspan="2">Общо @summary.Brand.GetDisplayName():</td>
+                    <td class="px-3 fw-bold">@summary.TotalQuantityUnits.ToString("0")</td>
+                    <td class="px-3 fw-bold">@summary.NetTotal.ToString("0.00")</td>
+                    <td class="px-3 fw-bold">@summary.TotalDiscount.ToString("0.00")</td>
                 </tr>
             </tfoot>
         </table>
@@ -90,26 +104,40 @@ else
     List<Product> products = new();
     List<PriceRule> priceOptions = new();
     List<Sale> sales = new();
+    List<BrandSalesSummary> brandSummaries = new();
+    HubConnection? hubConnection;
 
-    // Render order of brand tables
+    // Order of brand tables
     Brand[] brandOrder = new[] { Brand.Totem, Brand.Ceramics, Brand.Candles };
 
     int? productId;
     decimal? price;
     string? priceText;    // manual price input (ceramics)
     string? discountText; // manual discount input (all brands)
+    string? note;
     int qty = 1;
+    string? validationMessage;
 
     // Bulgarian culture for date/time formatting
     static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+
+    bool DisableAddButton => !string.IsNullOrEmpty(validationMessage);
 
     Product? selectedProduct => products.FirstOrDefault(p => p.ProductId == productId);
 
     protected override async Task OnInitializedAsync()
     {
-        day = await DbContext.EventDays.Include(x => x.Event).FirstOrDefaultAsync(x => x.EventDayId == id);
-        products = await DbContext.Products.Where(p => p.IsActive).OrderBy(p => p.Name).ToListAsync();
-        sales = await DbContext.Sale.Include(x => x.Product).Where(s => s.EventDayId == id).OrderByDescending(x => x.SaleId).ToListAsync();
+        day = await EventSvc.GetEventDayByIdAsync(id);
+        if (day == null)
+        {
+            // EventDay not found - the loading message will remain visible            
+            return;
+        }
+
+        products = await ProductSvc.GetActiveProductsAsync();
+
+        await ReloadSalesAsync();
+        await EnsureHubConnectionAsync();
     }
 
     async Task OnProductChanged()
@@ -124,67 +152,168 @@ else
         {
             priceOptions = productId is null
                 ? new()
-                : await DbContext.PriceRules.Where(r => r.ProductId == productId).OrderBy(r => r.SortOrder).ToListAsync();
+                : await ProductSvc.GetPriceRulesForProductAsync(productId.Value);
             price = null; priceText = null; qty = 1;
         }
+
+        ClearValidationMessage();
         StateHasChanged();
     }
 
     async Task Add()
     {
-        if (productId is null || day is null) return;
+        if (day is null) return;
+        if (productId is null)
+        {
+            validationMessage = "Посочи какво продаваш, на врачка ли ще ходиш после?";
+            return;
+        }
+
+        ClearValidationMessage();
 
         // Ensure price is set (parse string for ceramics)
         if (selectedProduct?.Brand == Brand.Ceramics)
         {
-            if (!decimal.TryParse(priceText, NumberStyles.Number, CultureInfo.CurrentCulture, out var parsedPrice)) return;
+            if (!TryParseDecimal(priceText, out var parsedPrice))
+            {
+                validationMessage = $"Въведи цена каТ нормален човек, (например: 12.50), какво е това {priceText}??";
+                return;
+            }
+
             price = parsedPrice;
         }
-        if (price is null) return;
 
-        // Parse discount amount (optional)
-        var discount = decimal.TryParse(discountText, NumberStyles.Number, CultureInfo.CurrentCulture, out var parsedDiscount)
-            ? parsedDiscount
-            : 0m;
-
-        var units = selectedProduct?.Brand == Brand.Ceramics
-            ? 1
-            : await new PriceRuleService(DbContext).GetUnitsForAsync(productId.Value, price.Value, day.Date);
-
-        var s = new Sale
+        if (price is null)
         {
-            EventDayId = day.EventDayId,
-            ProductId = productId.Value,
-            UnitPrice = price.Value,
-            QuantityUnits = units,
-            DiscountValue = discount,
-            CreatedUtc = DateTime.UtcNow
-        };
+            validationMessage = "Въведете цена за продукта вЕ, без пари ли го даваш 👀?";
+            return;
+        }
 
-        DbContext.Sale.Add(s);
-        await DbContext.SaveChangesAsync();
-        sales.Insert(0, await DbContext.Sale.Include(x => x.Product).FirstAsync(x => x.SaleId== s.SaleId));
+        var discount = 0m;
+        if (!string.IsNullOrWhiteSpace(discountText))
+        {
+            if (!TryParseDecimal(discountText, out var parsedDiscount))
+            {
+                validationMessage = "Тая отстъпка не трябва ли да е в лв.? Или ще му даваш нещо друго?";
+                return;
+            }
+
+            discount = parsedDiscount;
+        }
+
+        if(discount > price)
+        {
+            validationMessage = "Ко напрай вЕ манЯк? Отстъпката ти е по-голяма от цената, да не им даваш ти пари само и само да го вземат?";
+            return;
+        }
+
+        var unitsPerSale = await PriceRuleSvc.GetUnitsForProductAsync(productId.Value, price.Value, day.Date);
+
+        var newSale = await SaleSvc.CreateSaleAsync(
+            day.EventDayId,
+            productId.Value,
+            unitsPerSale.priceRuleId,
+            price.Value,
+            unitsPerSale.units,
+            discount,
+            note);
+
+        await ReloadSalesAsync();
 
         // Reset quick inputs but keep current product selection
-        price = null; priceText = null; discountText = null; qty = 1;
-        await OnProductChanged(); // repopulate priceOptions for thecurrently selected product
+        price = null; priceText = null; discountText = null; note = null; qty = 1;
+        await OnProductChanged(); // repopulate priceOptions for the currently selected product
     }
 
     private async Task OnPriceChanged()
     {
         if (productId is null || day is null) return;
+
         if (selectedProduct?.Brand == Brand.Ceramics)
         {
             // Parse typed price using current culture
-            price = decimal.TryParse(priceText, NumberStyles.Number, CultureInfo.CurrentCulture, out var parsed)
+            price = TryParseDecimal(priceText, out var parsed)
                 ? parsed
                 : null;
             qty = 1;
         }
         else if (price is not null)
         {
-            qty = await new PriceRuleService(DbContext).GetUnitsForAsync(productId.Value, price.Value, day.Date);
+            var unitsPerSale = await PriceRuleSvc.GetUnitsForProductAsync(productId.Value, price.Value, day.Date);
+            qty = unitsPerSale.units;
         }
+
+        ClearValidationMessage();
+
         StateHasChanged();
+    }
+
+    void ClearValidationMessage()
+    {
+        validationMessage = null;
+    }
+
+    static bool TryParseDecimal(string? value, out decimal result)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            result = 0;
+            return false;
+        }
+
+        // trust the intended Bulgarian formatting first
+        if (decimal.TryParse(value.Replace(" ", string.Empty), NumberStyles.Number, Bg, out result))
+        {
+            return true;
+        }
+
+        // then try a custom normalization as a rescue path
+        var normalized = value.Replace(" ", string.Empty).Replace(',', '.');
+        return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out result);
+    }
+
+    async Task ReloadSalesAsync()
+    {
+        brandSummaries = await SaleSvc.GetBrandSalesSummariesAsync(id);
+        sales = await SaleSvc.GetSalesByEventDayAsync(id);
+    }
+
+    async Task EnsureHubConnectionAsync()
+    {
+        if (hubConnection is not null) return;
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Nav.ToAbsoluteUri(SalesHub.HubPath))
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On<int, int>("SaleCreated", async (eventDayId, saleId) =>
+        {
+            if (day is null || eventDayId != day.EventDayId) return;
+            await InvokeAsync(async () =>
+            {
+                await ReloadSalesAsync();
+                StateHasChanged();
+            });
+        });
+
+        await hubConnection.StartAsync();
+        await hubConnection.InvokeAsync("JoinDayGroup", id);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is null) return;
+        try
+        {
+            if (hubConnection.State == HubConnectionState.Connected)
+            {
+                await hubConnection.InvokeAsync("LeaveDayGroup", id);
+            }
+            await hubConnection.DisposeAsync();
+        }
+        catch
+        {
+            // Swallow to avoid throwing during circuit disposal.
+        }
     }
 }
