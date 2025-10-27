@@ -124,14 +124,13 @@ else
     int qty = 1;
     string? validationMessage;
 
-    // Bulgarian culture for date/time formatting
     static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
 
     bool DisableAddButton => !string.IsNullOrEmpty(validationMessage);
 
     
-    // Sofia timezone for consistent time display
-    static readonly TimeZoneInfo SofiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("FLE Standard Time"); // Sofia timezone
+    // "FLE Standard Time" is the Windows time zone ID for Sofia, Bulgaria (UTC+2/UTC+3)
+    static readonly TimeZoneInfo SofiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("FLE Standard Time");
 
     Product? selectedProduct => products.FirstOrDefault(p => p.ProductId == productId);
 
