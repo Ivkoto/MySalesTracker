@@ -2,7 +2,7 @@ namespace MySalesTracker.Services;
 
 public sealed class WeatherState
 {
-    public string City { get; set; } = "София";
+    public string City { get; set; } = "РЎРѕС„РёСЏ";
     public int DisplayHours { get; set; } = 12;
 
     public record Entry(string Display, double Temp, double Wind, int Prob, double Mm);

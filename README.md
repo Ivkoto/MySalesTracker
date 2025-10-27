@@ -34,15 +34,16 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 - Navigate to:
   - `/events` to create and manage events/days
   - `/day/{id}` to add sales lines for a day
-  - `/weather` to check weather forecast (Open?Meteo)
+  - `/weather` to check weather forecast (Open-Meteo)
 
 ## Current features
 
 - Events and event days
+- Real-time sales sync across devices (SignalR push per event day)
 - Sales entry per product with brand-based rules
   - `Керамика` (ceramics): manual price entry with decimal keypad on mobile
   - `Свещи/Гора` and `Тотем`: select price from rules; the selected price is the total for the units
-- Discount input per sale (amount)
+- Discount input per sale (amount) with inline validation
 - Grouped view by brand with daily totals
 - Weather page (optional utility)
   - City search, 12/24/48-hour forecast
@@ -65,7 +66,7 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 - `Product` (Name, Brand, IsActive)
 - `PriceRule` (Price, UnitsPerSale, SortOrder, Effective range)
 - `Event` / `EventDay`
-- `Sale` (Product snapshot, UnitPrice [total], QuantityUnits, DiscountValue, CreatedUtc)
+- `Sale` (Product snapshot, Price [total], QuantityUnits, DiscountValue, PriceRuleId, CreatedUtc)
 
 ## Migrations & seeding
 
@@ -78,9 +79,12 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 - `MySalesTracker` (web app)
   - `Components/Pages` - pages (`Events.razor`, `EventDay.razor`, `Weather.razor`)
   - `Components/Layout` - layout and nav
-  - `Services` - app services (e.g., `WeatherService`, `WeatherState`, `PriceRuleService`)
+  - `Hubs` - SignalR hubs (e.g., `SalesHub`)
+  - `DTOs` - lightweight data transfer records
+  - `Services` - app services (e.g., `WeatherService`, `WeatherState`, `SaleService`, `PriceRuleService`)
 - `MySalesTracker.Data` (data access)
-  - `Models` - entities and enums
+  - `Models` - entities and enums (one type per file)
+  - `Extensions` - shared EF helpers
   - `DataSeeder.cs` - initial data seeding
   - `Migrations` - EF Core migrations
 
@@ -103,7 +107,7 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 
 - Add Payments panel for Cash/Card/Revolut and show differences vs sales.
 - Add Expenses for the day.
-- Add Brand/Category summary page (your blue “Обороти” box).
+- Add Brand/Category summary page (your blue "Обороти" box).
 - Make the day-entry UI touch-friendly (bigger buttons, number keypad, sticky totals).
 - Add Admin CRUD for Products/Rules (so you can extend logic without code).
 
@@ -129,3 +133,4 @@ _NuGet packages. Add, register their services in Program.cs, include their CSS/J
 ---
 
 Maintained for internal use. Contributions or suggestions are welcome.
+

@@ -1,5 +1,6 @@
-﻿namespace MySalesTracker.Data.Models;
+namespace MySalesTracker.Data;
 using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 
 public enum PaymentMethod
 {
@@ -24,6 +25,7 @@ public enum Brand
     [Display(Name = "Керамика")]
     Ceramics = 2,
 
-    [Display(Name = "Свещи")]
+    [Display(Name = "Гора")]
     Candles = 3
 }
+
