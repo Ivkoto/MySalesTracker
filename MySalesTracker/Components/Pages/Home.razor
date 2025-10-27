@@ -1,7 +1,56 @@
-﻿@page "/"
+@page "/"
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="text-center">
+    <h1>Hello, TOTEM!</h1>
+    <br />
+    <h3>шИ къртим ли кинтИ днес?<br />🤑 💰 </h3>
+    <br />
+    <br />
 
-Welcome to your new app.
+    <div class="home-button-container">
+        <NavLink class="home-nav-button" href="weather">
+            <h3>Да разопаковам ли шатрата?<br /> ⛈️ ☔️ 🌪️ 🔆 ⛱️ 👀</h3>
+        </NavLink>
+    </div>
+
+    <br />
+
+    <div class="home-button-container">
+        <NavLink class="home-nav-button" href="events">
+            <h3>Ще се работи!<br /> 💵 📝</h3>
+        </NavLink>
+    </div>
+</div>
+
+<style>
+    .home-button-container {
+        max-width: 36rem;
+        margin: 0 auto;
+    }
+
+    .home-nav-button {
+        display: block;
+        padding: 1.5rem 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 1rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: white !important;
+    }
+
+    .home-nav-button:hover {
+        transform: translateY(-1rem);
+        box-shadow: 0 0.7rem 1.6rem rgba(0, 0, 0, 0.3);
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+
+    .home-nav-button h3 {
+        margin: 0;
+        font-weight: 300;
+    }
+</style>
+
+
