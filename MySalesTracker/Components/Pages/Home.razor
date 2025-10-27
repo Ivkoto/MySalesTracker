@@ -24,6 +24,9 @@
     </div>
 </div>
 
+@* [nitpick] Inline styles in component files should be moved to a separate CSS file or CSS
+isolation file (Home.razor.css)to follow Blazor best practices and improve maintainability.
+For some reason if we did this, it breaks the style!*@
 <style>
     .home-button-container {
         max-width: 36rem;
@@ -41,10 +44,12 @@
         color: white !important;
     }
 
-    .home-nav-button:hover {
-        transform: translateY(-1rem);
+    .home-nav-button:hover,
+    .home-nav-button:focus-visible{
+        transform: translateY(-0.25rem);
         box-shadow: 0 0.7rem 1.6rem rgba(0, 0, 0, 0.3);
         background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        outline: none;
     }
 
     .home-nav-button h3 {
