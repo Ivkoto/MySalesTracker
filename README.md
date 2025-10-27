@@ -98,7 +98,7 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 
 - `main`: Production-ready code
 - `feature/*`: Individual feature branches
-- `db/*`: Database realated changes branch
+- `db/*`: Database related changes branch
 - `bug/*`: Bug fix branches
 - `fix/*`: Small fixes and refactoring branches
 
