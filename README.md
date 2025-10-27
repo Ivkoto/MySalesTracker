@@ -94,6 +94,15 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 - Missing icons: check the Bootstrap Icons link in `Components/App.razor`.
 - Client error overlay: Blazor shows `#blazor-error-ui` when a client/circuit error occurs.
 
+## Branching Strategy
+
+- `main`: Production-ready code
+- `feature/*`: Individual feature branches
+- `db/*`: Database related changes branch
+- `bug/*`: Bug fix branches
+- `fix/*`: Small fixes and refactoring branches
+
+
 ## Next moves / ideas
 
 - Add Payments panel for Cash/Card/Revolut and show differences vs sales.

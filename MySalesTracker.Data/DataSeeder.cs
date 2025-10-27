@@ -14,7 +14,7 @@ public static class DataSeeder
     {
         if (await context.Products.AnyAsync()) return;
 
-        var pBandana = new Product { Name = "Бандана", Brand = Brand.Totem };
+        var pBandana = new Product { Name = "Бандани", Brand = Brand.Totem };
         var pGlove = new Product { Name = "Ръкавици", Brand = Brand.Totem };
         var pCandle = new Product { Name = "Свещ", Brand = Brand.Candles };
         var pMatches = new Product { Name = "Кибрит", Brand = Brand.Candles };

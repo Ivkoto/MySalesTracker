@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace MySalesTracker.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class DatabaseBuildAndSeed : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -137,7 +137,7 @@ namespace MySalesTracker.Data.Migrations
                     EventDayId = table.Column<int>(type: "int", nullable: false),
                     ProductId = table.Column<int>(type: "int", nullable: false),
                     PriceRuleId = table.Column<int>(type: "int", nullable: true),
-                    UnitPrice = table.Column<decimal>(type: "decimal(6,2)", nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(6,2)", nullable: false),
                     QuantityUnits = table.Column<int>(type: "int", nullable: false),
                     DiscountValue = table.Column<decimal>(type: "decimal(6,2)", nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
