@@ -1,4 +1,4 @@
-﻿@page "/day/{id:int}"
+@page "/day/{id:int}"
 
 <h2>Ден на събитие</h2>
 
@@ -53,31 +53,43 @@ else
         {
             continue;
         }
+        //TODO: Do we have to use the already calculated total in the service instead of recalculating it here?
         var total = lines.Sum(x => x.UnitPrice);
         <h4 class="mt-4">@brand.GetDisplayName()</h4>
-        <table class="table table-sm align-middle">
-            <thead class="table-light">
+        <table class="table table-sm table-striped align-middle">
+            <thead class="table-warning">
                 <tr>
                     <th class="px-3">Час</th>
                     <th class="px-3">Продукт</th>
                     <th class="px-3">бр.</th>
                     <th class="px-3">Цена</th>
+                    <th class="px-3">Действия</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var s in lines)
                 {
                     <tr>
-                        <td class="px-3">@s.CreatedUtc.ToLocalTime().ToString("dd dddd HH:mm", Bg)</td>
+                        <td class="px-3">@TimeZoneInfo.ConvertTimeFromUtc(s.CreatedUtc, SofiaTimeZone).ToString("HH:mm", Bg)</td>
                         <td class="px-3">@s.Product.Name</td>
                         <td class="px-3">@s.QuantityUnits</td>
                         <td class="px-3">@s.UnitPrice.ToString("0.00")</td>
+                        <td class="px-3 text-end">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-primary btn-sm" @onclick="() => EditSale(s.SaleId)">
+                                    Edit
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteSale(s.SaleId)">
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
                     </tr>
                 }
             </tbody>
             <tfoot>
-                <tr>
-                    <td class="px-3 fw-bold" colspan="3">Общо @brand.GetDisplayName():</td>
+                <tr class="table-light">
+                    <td class="px-3 fw-bold" colspan="4">Общо @brand.GetDisplayName():</td>
                     <td class="px-3 fw-bold">@total.ToString("0.00")</td>
                 </tr>
             </tfoot>
@@ -103,6 +115,9 @@ else
 
     // Bulgarian culture for date/time formatting
     static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+    
+    // Sofia timezone for consistent time display
+    static readonly TimeZoneInfo SofiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("FLE Standard Time"); // Sofia timezone
 
     Product? selectedProduct => products.FirstOrDefault(p => p.ProductId == productId);
 
@@ -187,5 +202,17 @@ else
             qty = await new PriceRuleService(DbContext).GetUnitsForAsync(productId.Value, price.Value, day.Date);
         }
         StateHasChanged();
+    }
+
+    private void EditSale(int saleId)
+    {
+        // TODO: Implement edit functionality
+        // This could open a modal or navigate to an edit page
+    }
+
+    private void DeleteSale(int saleId)
+    {
+        // TODO: Implement delete functionality
+        // This could show a confirmation dialog and then delete the sale
     }
 }
