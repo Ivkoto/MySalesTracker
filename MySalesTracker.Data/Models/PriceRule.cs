@@ -3,26 +3,26 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MySalesTracker.Data.Models;
 
-public class PriceRule
+public sealed class PriceRule
 {
     [Key]
-    public int PriceRuleId { get; set; }
+    public int PriceRuleId { get; init; }
 
     [Column(TypeName = "decimal(6,2)")]
-    public decimal Price { get; set; }
+    public decimal Price { get; init; }
 
-    public int UnitsPerSale { get; set; }
+    public int UnitsPerSale { get; init; }
 
     [ForeignKey("Product")]
-    public int ProductId { get; set; }
+    public int ProductId { get; init; }
 
-    public int SortOrder { get; set; }
+    public int SortOrder { get; init; }
 
-    public Product Product { get; set; } = null!;
-
-    [Column(TypeName = "date")]
-    public DateOnly EffectiveFrom { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+    public Product Product { get; init; } = null!;
 
     [Column(TypeName = "date")]
-    public DateOnly? EffectiveTo { get; set; }
+    public DateOnly EffectiveFrom { get; init; } = DateOnly.FromDateTime(DateTime.UtcNow);
+
+    [Column(TypeName = "date")]
+    public DateOnly? EffectiveTo { get; init; }
 }

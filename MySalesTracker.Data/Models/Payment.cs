@@ -3,17 +3,17 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MySalesTracker.Data.Models;
 
-public class Payment
+public sealed class Payment
 {
     [Key]
-    public int PaymentId { get; set; }
+    public int PaymentId { get; init; }
 
     [ForeignKey("EventDay")]
-    public int EventDayId { get; set; }
-    public EventDay EventDay { get; set; } = null!;
+    public int EventDayId { get; init; }
+    public EventDay EventDay { get; init; } = null!;
 
-    public PaymentMethod Method { get; set; }
+    public PaymentMethod Method { get; init; }
 
     [Column(TypeName = "decimal(6,2)")]
-    public decimal Amount { get; set; }
+    public decimal Amount { get; init; }
 }

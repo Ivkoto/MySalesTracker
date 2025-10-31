@@ -5,7 +5,7 @@ namespace MySalesTracker.Data;
 
 /// <summary>
 /// Seeds the initial dataset we already maintain in Google Spreadsheets.
-/// It mirrors today’s known structure and values (brands, products, and price rules)
+/// It mirrors today's known structure and values (brands, products, and price rules)
 /// so the application starts with familiar data and can replace the spreadsheet workflow.
 /// </summary>
 public static class DataSeeder
@@ -22,6 +22,7 @@ public static class DataSeeder
         var pCeramic = new Product { Name = "Керамика", Brand = Brand.Ceramics };
 
         context.AddRange(pBandana, pGlove, pCandle, pMatches, pBags, pCeramic);
+        await context.SaveChangesAsync();
 
         var effectiveFrom = new DateOnly(2020, 1, 1);
 
@@ -61,6 +62,14 @@ public static class DataSeeder
         await context.SaveChangesAsync();
 
         static PriceRule PR(Product p, decimal price, int units, int sort)
-            => new() { Product = p, Price = price, UnitsPerSale = units, SortOrder = sort, EffectiveFrom = new DateOnly(2020, 1, 1)};
+            => new()
+            {
+                Product = p,
+                ProductId = p.ProductId,
+                Price = price,
+                UnitsPerSale = units,
+                SortOrder = sort,
+                EffectiveFrom = new DateOnly(2020, 1, 1)
+            };
     }
 }

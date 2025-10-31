@@ -1,7 +1,7 @@
 using MySalesTracker.Data;
 using MySalesTracker.Data.Models;
 
-namespace MySalesTracker.Models;
+namespace MySalesTracker.DTOs;
 
 /// <summary>
 /// Summary of sales for a specific brand.

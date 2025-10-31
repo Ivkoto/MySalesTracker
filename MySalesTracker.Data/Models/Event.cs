@@ -2,20 +2,21 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MySalesTracker.Data.Models;
-public class Event
+
+public sealed class Event
 {
     [Key]
-    public int EventId { get; set; }
+    public int EventId { get; init; }
 
     [StringLength(50)]
-    public string Name { get; set; } = null!;
+    public string Name { get; init; } = null!;
 
     [Column(TypeName = "date")]
-    public DateOnly StartDate { get; set; }
+    public DateOnly StartDate { get; init; }
 
     [Column(TypeName = "date")]
-    public DateOnly EndDate { get; set; }
+    public DateOnly EndDate { get; init; }
 
-    public ICollection<EventDay> Days { get; set; } = [];
+    public ICollection<EventDay> Days { get; init; } = [];
 }
 
