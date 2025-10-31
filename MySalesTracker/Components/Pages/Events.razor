@@ -13,17 +13,27 @@
     <button class="btn btn-primary" style="width: 19rem; height: 2.75rem" @onclick="Create">Създай</button>
 </div>
 
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+  <div class='alert alert-danger' py-2 px-3 mb-3>
+    @errorMessage
+  </div>
+}
+
 <ul>
     @foreach (var b in events)
     {
         <li>
-            <b>@b.Name</b> (@b.StartDate → @b.EndDate)
-            <ul>
+            <h4>@b.Name</h4> (@b.StartDate → @b.EndDate)
+            <div>
                 @foreach (var d in b.Days.OrderBy(x => x.Date))
                 {
-                    <li><a href="@($"/day/{d.EventDayId}")">@d.Date</a></li>
+                    @* <li><a href="@($"/day/{d.EventDayId}")">@d.Date</a></li> *@
+                    <a href="@($"/day/{d.EventDayId}")" class="d-inline-block p-2 m-1 border rounded text-decoration-none">
+                        <strong>@d.Date.ToString("dd dddd")</strong>
+                    </a>
                 }
-            </ul>
+            </div>
         </li>
     }
 </ul>
@@ -33,16 +43,22 @@
     DateOnly start = DateOnly.FromDateTime(DateTime.Today);
     DateOnly end = DateOnly.FromDateTime(DateTime.Today);
     List<MySalesTracker.Data.Models.Event> events = new();
+    string? errorMessage;
 
     protected override async Task OnInitializedAsync()
         => events = await EventSvc.GetAllEventsAsync();
 
     async Task Create()
     {
-        if (end < start) end = start;
+      
+        var result = await EventSvc.CreateEventAsync(name, start, end);
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage;
+            return;
+        }
 
-        var newEvent = await EventSvc.CreateEventAsync(name, start, end);
-        events.Insert(0, newEvent); // Add to top of list
+        events.Insert(0, result.Event!);
 
         /*TODO: @IvayloK - replace the lines above if you need to reload all the events and keep the data updated on all the devices
         in cases where other users might have created events simultaneously*/
@@ -53,5 +69,6 @@
         name = $"Базар {DateOnly.FromDateTime(DateTime.Today)}";
         start = DateOnly.FromDateTime(DateTime.Today);
         end = DateOnly.FromDateTime(DateTime.Today);
+        errorMessage = null;
     }
 }

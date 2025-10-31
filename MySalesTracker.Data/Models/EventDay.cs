@@ -3,20 +3,20 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MySalesTracker.Data.Models;
 
-public class EventDay
+public sealed class EventDay
 {
     [Key]
-    public int EventDayId { get; set; }
+    public int EventDayId { get; init; }
 
     [ForeignKey("Event")]
-    public int EventId { get; set; }
+    public int EventId { get; init; }
 
-    public Event Event { get; set; } = null!;
+    public Event Event { get; init; } = null!;
 
     [Column(TypeName = "date")]
-    public DateOnly Date { get; set; }
+    public DateOnly Date { get; init; }
 
-    public ICollection<Sale> Sales { get; set; } = [];
-    public ICollection<Expense> Expenses { get; set; } = [];
-    public ICollection<Payment> PaymentsCounted { get; set; } = [];
+    public ICollection<Sale> Sales { get; init; } = [];
+    public ICollection<Expense> Expenses { get; init; } = [];
+    public ICollection<Payment> PaymentsCounted { get; init; } = [];
 }

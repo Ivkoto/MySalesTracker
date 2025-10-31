@@ -5,19 +5,21 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using Microsoft.AspNetCore.Components.Web
-@using static Microsoft.AspNetCore.Components.Web.RenderMode
 @using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
-@using Microsoft.AspNetCore.SignalR.Client
 @using MySalesTracker
 @using MySalesTracker.Components
 @using MySalesTracker.Data
 @using MySalesTracker.Data.Models
 @using MySalesTracker.Data.Extensions
+@using MySalesTracker.Domain
+@using MySalesTracker.DTOs
 @using MySalesTracker.Hubs
-@using MySalesTracker.Models
 @using MySalesTracker.Services
+
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
 
 @inject MySalesTracker.Services.EventService EventSvc
 @inject MySalesTracker.Services.SaleService SaleSvc
