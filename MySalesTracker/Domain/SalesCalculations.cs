@@ -25,7 +25,7 @@ public static class SalesCalculations
     /// <param name="sales">Collection of sales to summarize.</param>
     /// <returns>List of brand summaries with aggregated totals.</returns>
     public static List<BrandSalesSummary> GroupSalesByBrand(IEnumerable<Sale> sales)
-        =>sales.GroupBy(s => s.Product.Brand).Select(CreateBrandSummary).ToList();
+        => sales.GroupBy(s => s.Product.Brand).Select(CreateBrandSummary).ToList();
 
     /// <summary>
     /// Creates a brand summary from a grouped collection of sales.

@@ -34,12 +34,12 @@ public static class WeatherCalculations
 
         if (t <= m)
         {
-            var frac = m == 0 ? 0 : t / m;
+            var frac = Math.Abs(m) < double.Epsilon ? 0 : t / m;
             hue = Lerp(220, 60, frac); // Blue to yellow
         }
         else
         {
-            var frac = (1 - m) == 0 ? 1 : (t - m) / (1 - m);
+            var frac = Math.Abs(1 - m) < double.Epsilon ? 1 : (t - m) / (1 - m);
             hue = Lerp(60, 0, frac); // Yellow to red
         }
 
