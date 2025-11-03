@@ -1,0 +1,170 @@
+@page "/weather"
+
+@inject WeatherState State
+@inject IWeatherService WeatherSvc
+
+<h2>шИ вали ли ⛈️🌪️👀 🥃🥴</h2>
+
+<div class="mb-3 d-flex gap-2 flex-wrap align-items-center">
+    <input class="form-control" style="width: 18rem" placeholder="City (e.g. Sofia)" @bind="city" />
+    <select class="form-select" style="width: 8rem" @bind="displayDays">
+        @for (var d = 1; d <= MaxForecastDays; d++)
+        {
+       <option value="@d">@d @(d == 1 ? "day" : "days")</option>
+        }
+  </select>
+    <button class="btn btn-primary" @onclick="Load">Get forecast</button>
+</div>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (summary is not null)
+{
+    <div class="card p-3">
+        <div><b>Location:</b> @summary.Name (@summary.Lat.ToString("0.###", CultureInfo.InvariantCulture), @summary.Lon.ToString("0.###", CultureInfo.InvariantCulture))</div>
+        <div class="mt-2">
+            <b>Next @displayDays @(displayDays == 1 ? "day" : "days"):</b>
+             @foreach (var day in summary.Days)
+             {
+                 <div class="day-block mt-3">
+                     <div class="day-title">@day.DayLabel</div>
+                     <div class="hour-grid mt-2">
+                         @foreach (var hour in day.Hours)
+                         {
+                             var bg = WeatherCalculations.GetTemperatureBackgroundColor(hour.Temp);
+                             var edge = WeatherCalculations.GetTemperatureBorderColor(hour.Temp);
+                             <div class="hour-card" style="background-color: @bg; border-color:@edge">
+                                 <div class="hour-time">@hour.TimeLabel</div>
+                                 <div class="hour-values">
+                                     <span class="me-2">@hour.Temp.ToString("0.#", CultureInfo.InvariantCulture)&deg;C</span>
+                                     <span>Wind @hour.Wind.ToString("0.#", CultureInfo.InvariantCulture) km/h</span>
+                                 </div>
+                                 <div class="hour-rain">Chance @hour.Prob% (@hour.Mm.ToString("0.0", CultureInfo.InvariantCulture) mm)</div>
+                             </div>
+                         }
+                     </div>
+                 </div>
+               }
+        </div>
+    </div>
+}
+
+@code {
+    const int MaxForecastDays = 10;
+    const int HoursPerDay = 24;
+
+    string city = "Sofia";
+    string? error;
+    int displayDays = 3;
+
+    record HourEntry(string TimeLabel, double Temp, double Wind, int Prob, double Mm);
+    record DayForecast(string DayLabel, List<HourEntry> Hours);
+    record Summary(string Name, double Lat, double Lon, List<DayForecast> Days);
+
+    Summary? summary;
+
+    protected override void OnInitialized()
+    {
+        city = State.City;
+        displayDays = Math.Clamp(State.DisplayDays, 1, MaxForecastDays);
+
+        if (State.LastSummary is not null)
+        {
+            summary = new Summary(
+                State.LastSummary.Name,
+                State.LastSummary.Lat,
+                State.LastSummary.Lon,
+                State.LastSummary.Days
+                    .Select(day => new DayForecast(
+                        day.DayLabel,   
+                        day.Hours.Select(hour => new HourEntry(hour.TimeLabel, hour.Temp, hour.Wind, hour.Prob, hour.Mm)).ToList()))
+                    .ToList());
+        }
+    }
+
+    async Task Load()
+    {
+        error = null;
+        summary = null;
+
+        city = city.Trim();
+
+        if (string.IsNullOrWhiteSpace(city))
+        {
+            error = "Трябва да бъде въведен град.";
+            return;
+        }
+
+        displayDays = Math.Clamp(displayDays, 1, MaxForecastDays);
+        State.City = city;
+        State.DisplayDays = displayDays;
+
+        var geo = await WeatherSvc.FetchGeocode(city);
+
+        if (geo is null)
+        {
+            error = "Градът не е намерен.";
+            return;
+        }
+
+        var (lat, lon, name) = geo.Value;
+        var forecast = await WeatherSvc.GetForecast(lat, lon, displayDays);
+
+        if (forecast?.Hours is null || forecast.Hours.Count == 0)
+        {
+            error = "Няма данни за метеорологичната прогноза.";
+            return;
+        }
+
+        var maxHours = Math.Min(displayDays * HoursPerDay, forecast.Hours.Count);
+        var parsedHours = new List<(DateTime Date, HourEntry Hour)>();
+
+        for (int i = 0; i < maxHours; i++)
+        {
+            var hour = forecast.Hours[i];
+            var timeLabel = hour.Time.ToString("HH:mm", CultureInfo.InvariantCulture);
+            parsedHours.Add((hour.Time.Date, new HourEntry(timeLabel, hour.Temperature, hour.WindSpeed, hour.PrecipitationProbability, hour.Precipitation)));
+        }
+
+        if (parsedHours.Count == 0)
+        {
+            error = "Няма налични метеорологични данни.";
+            return;
+        }
+
+        var daySummaries = parsedHours
+            .GroupBy(x => x.Date)
+            .OrderBy(g => g.Key)
+            .Take(displayDays)
+            .Select(group =>
+                {
+                    var dayLabel = group.Key.ToString("dddd, dd MMMM", CultureInfo.InvariantCulture);
+                    return new DayForecast(dayLabel, group.Select(x => x.Hour).ToList());
+                })
+            .ToList();
+
+        if (daySummaries.Count == 0)    
+        {
+            error = "Няма налични метеорологични данни.";
+            return;
+        }
+
+        summary = new Summary(name ?? city, lat, lon, daySummaries);
+
+        State.Store(
+            new WeatherState.Summary(
+                summary.Name,
+                summary.Lat,
+                summary.Lon,
+                daySummaries
+                    .Select(day => new WeatherState.DaySummary(
+                            day.DayLabel,
+                            day.Hours.Select(hour => new WeatherState.HourEntry(hour.TimeLabel, hour.Temp, hour.Wind, hour.Prob, hour.Mm)).ToList()))
+                    .ToList()
+            )
+        );
+    }
+}

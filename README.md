@@ -1,6 +1,6 @@
 # MySalesTracker
 
-Blazor Server (.NET 9) application for tracking event sales with brand-based pricing rules. Uses Entity Framework Core (SQL Server) and a simple UI optimized for mobile.
+Blazor Server (.NET 9) application for tracking event sales with brand-based pricing rules. Built with Clean Architecture principles, using Entity Framework Core (SQL Server), SignalR for real-time updates, and a mobile-optimized UI.
 
 ## Quick start
 
@@ -10,13 +10,16 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 - SQL Server (LocalDB or full SQL Server)
 - A modern browser (mobile-friendly)
 
-#### Configure database
+#### Configure database and SignalR
 
-- Edit `MySalesTracker/appsettings.json` and set `ConnectionStrings:DatabaseConnection`.
+- Edit `MySalesTracker.Web/appsettings.json`:
   ```json
   {
     "ConnectionStrings": {
       "DatabaseConnection": "Server=(localdb)\\mssqllocaldb;Database=MySalesTracker;Trusted_Connection=True;MultipleActiveResultSets=true"
+    },
+    "SignalR": {
+      "SalesHubPath": "/hubs/sales"
     }
   }
   ```
@@ -25,8 +28,8 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 
 - From the solution root:
   - Restore/build: `dotnet build`
-  - Run: `dotnet run --project MySalesTracker/MySalesTracker.csproj`
-- Or F5 in Visual Studio with `MySalesTracker` as startup project.
+  - Run: `dotnet run --project MySalesTracker.Web`
+- Or F5 in Visual Studio with `MySalesTracker.Web` as startup project.
 
 #### First run behavior
 
@@ -46,16 +49,24 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 - Discount input per sale (amount) with inline validation
 - Grouped view by brand with daily totals
 - Weather page (optional utility)
-  - City search, 12/24/48-hour forecast
+  - City search, 1 to 10 days forecast
   - Temperature and wind per hour
   - Color-coded hourly cards by temperature
   - State preserved within the same browser tab
+
+## Architecture highlights
+
+- **Dependency Inversion**: Application layer defines interfaces; Infrastructure implements them
+- **Repository Pattern**: Data access abstracted through repository interfaces
+- **Clean Separation**: Domain has zero dependencies on external frameworks
+- **Testability**: Business logic can be tested without database or external APIs
+- **Configuration-based**: SignalR hub paths and connection strings externalized to `appsettings.json`
 
 ## Development tips
 
 - Hot Reload: edit Razor/C# and refresh; use F5 (Debug) for best experience.
 - Mobile testing on device:
-  - Run the app with LAN binding, e.g.: `dotnet run --project MySalesTracker --urls http://0.0.0.0:5150`
+  - Run the app with LAN binding, e.g.: `dotnet run --project MySalesTracker.Web --urls http://0.0.0.0:5150`
   - Find your PC IP (e.g., 192.168.1.50), then open `http://192.168.1.50:5150/events` on your phone.
 - Decimal keypad on mobile: inputs use `inputmode="decimal"` where needed.
 - Icons: Bootstrap Icons are included via CDN in `Components/App.razor`.
@@ -70,29 +81,66 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 
 ## Migrations & seeding
 
-- The app auto-migrates and seeds on startup. To start fresh:
-  - Stop the app, drop the database, delete old migrations if needed
+- The app auto-migrates and seeds on startup (via `Program.cs`).
+- Migrations are in `MySalesTracker.Infrastructure/Migrations/`
+- To create a new migration:
+  ```bash
+  dotnet ef migrations add MigrationName --project MySalesTracker.Infrastructure --startup-project MySalesTracker.Web
+  ```
+- To start fresh:
+  - Stop the app, drop the database
+  - Delete migration files if needed
   - Run the app again to re-create and seed
 
-## Project structure
+## Project structure (Clean Architecture)
 
-- `MySalesTracker` (web app)
-  - `Components/Pages` - pages (`Events.razor`, `EventDay.razor`, `Weather.razor`)
-  - `Components/Layout` - layout and nav
-  - `Hubs` - SignalR hubs (e.g., `SalesHub`)
-  - `DTOs` - lightweight data transfer records
-  - `Services` - app services (e.g., `WeatherService`, `WeatherState`, `SaleService`, `PriceRuleService`)
-- `MySalesTracker.Data` (data access)
-  - `Models` - entities and enums (one type per file)
-  - `Extensions` - shared EF helpers
-  - `DataSeeder.cs` - initial data seeding
-  - `Migrations` - EF Core migrations
+The project follows Clean Architecture principles with clear separation of concerns across four layers:
+
+### `MySalesTracker.Domain` (Core Layer - Zero Dependencies)
+- `Entities/` - Core business entities (`Event`, `EventDay`, `Sale`, `Product`, `PriceRule`, `Expense`, `Payment`)
+- `Enums/` - Domain enumerations (`Brand`, `PaymentMethod`)
+- `Models/` - Domain models and value objects (`BrandSalesSummary`, `UnitsPerSale`, `WeatherForecast`, `HourlyForecast`)
+- `Services/` - Pure domain logic (`SalesCalculations`, `EventValidations`, `WeatherCalculations`)
+- `Exceptions/` - Domain-specific exceptions
+
+### `MySalesTracker.Application` (Use Cases Layer - Depends on Domain)
+- `Interfaces/` - Service and repository contracts
+  - `IEventRepository`, `ISaleRepository`, `IProductRepository`, `IPriceRuleRepository`
+  - `IWeatherService`, `INotificationService`
+- `Services/` - Application orchestration logic
+  - `EventService`, `SaleService`, `ProductService`, `PriceRuleService`
+- `Extensions/` - Dependency injection setup (`DependencyInjection.cs`)
+
+### `MySalesTracker.Infrastructure` (External Concerns - Depends on Application + Domain)
+- `Persistence/`
+  - `AppDbContext.cs` - EF Core DbContext
+  - `DataSeeder.cs` - Initial data seeding
+  - `Repositories/` - Internal repository implementations
+- `Migrations/` - EF Core migrations
+- `ExternalServices/` - External API integrations
+  - `WeatherService.cs` - Open-Meteo API client
+  - `WeatherModels.cs` - External API DTOs
+- `Services/` - Infrastructure service implementations
+  - `SignalRNotificationService.cs` - Real-time notifications
+- `Hubs/` - SignalR hubs (`SalesHub`)
+- `Extensions/` - Infrastructure DI setup
+
+### `MySalesTracker.Web` (Presentation Layer - Depends on Application + Infrastructure)
+- `Components/`
+  - `Pages/` - Razor pages (`Events.razor`, `EventDay.razor`, `Weather.razor`)
+  - `Layout/` - Layout components (`MainLayout.razor`, `NavMenu.razor`)
+- `State/` - UI state management (`WeatherState`)
+- `Extensions/` - Helper extensions (`EnumExtensions`)
+- `wwwroot/` - Static assets (CSS, JS, images)
+- `Program.cs` - Application entry point and DI composition root
 
 ## Troubleshooting
 
-- EF decimal precision warnings: the context configures money fields with precision; ensure migrations are up to date.
-- Missing icons: check the Bootstrap Icons link in `Components/App.razor`.
-- Client error overlay: Blazor shows `#blazor-error-ui` when a client/circuit error occurs.
+- **Missing SignalR configuration**: If you see `InvalidOperationException: SignalR:SalesHubPath is not configured`, ensure `appsettings.json` contains the `SignalR:SalesHubPath` setting.
+- **EF decimal precision warnings**: The context configures money fields with precision; ensure migrations are up to date.
+- **Missing icons**: Check the Bootstrap Icons CDN link in `Components/App.razor`.
+- **Client error overlay**: Blazor shows `#blazor-error-ui` when a client/circuit error occurs.
+- **CSS not loading**: Verify `MySalesTracker.Web.styles.css` reference in `App.razor` matches the generated scoped CSS bundle name.
 
 ## Branching Strategy
 
@@ -108,7 +156,6 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 - Add Payments panel for Cash/Card/Revolut and show differences vs sales.
 - Add Expenses for the day.
 - Add Brand/Category summary page (your blue "Обороти" box).
-- Make the day-entry UI touch-friendly (bigger buttons, number keypad, sticky totals).
 - Add Admin CRUD for Products/Rules (so you can extend logic without code).
 
 ## Open-source component libraries for better visual experiance
