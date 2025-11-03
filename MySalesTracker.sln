@@ -3,9 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36429.23
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MySalesTracker", "MySalesTracker\MySalesTracker.csproj", "{F94AE9D2-4AD9-4091-9FBE-C50493F2B780}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MySalesTracker.Web", "MySalesTracker.Web\MySalesTracker.Web.csproj", "{F94AE9D2-4AD9-4091-9FBE-C50493F2B780}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MySalesTracker.Data", "MySalesTracker.Data\MySalesTracker.Data.csproj", "{9951A0F5-ADB5-418F-9446-6905434AE6B1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MySalesTracker.Domain", "MySalesTracker.Domain\MySalesTracker.Domain.csproj", "{0334A955-FB05-43C6-BE06-2C6C24A8A072}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MySalesTracker.Application", "MySalesTracker.Application\MySalesTracker.Application.csproj", "{FC92F1E6-B956-47E7-BC21-BA4355EEE1BA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MySalesTracker.Infrastructure", "MySalesTracker.Infrastructure\MySalesTracker.Infrastructure.csproj", "{3AB5A936-924E-4BA4-855E-56C69D7D8421}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +21,18 @@ Global
 		{F94AE9D2-4AD9-4091-9FBE-C50493F2B780}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F94AE9D2-4AD9-4091-9FBE-C50493F2B780}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F94AE9D2-4AD9-4091-9FBE-C50493F2B780}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9951A0F5-ADB5-418F-9446-6905434AE6B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9951A0F5-ADB5-418F-9446-6905434AE6B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9951A0F5-ADB5-418F-9446-6905434AE6B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9951A0F5-ADB5-418F-9446-6905434AE6B1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0334A955-FB05-43C6-BE06-2C6C24A8A072}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0334A955-FB05-43C6-BE06-2C6C24A8A072}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0334A955-FB05-43C6-BE06-2C6C24A8A072}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0334A955-FB05-43C6-BE06-2C6C24A8A072}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FC92F1E6-B956-47E7-BC21-BA4355EEE1BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FC92F1E6-B956-47E7-BC21-BA4355EEE1BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FC92F1E6-B956-47E7-BC21-BA4355EEE1BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FC92F1E6-B956-47E7-BC21-BA4355EEE1BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3AB5A936-924E-4BA4-855E-56C69D7D8421}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3AB5A936-924E-4BA4-855E-56C69D7D8421}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3AB5A936-924E-4BA4-855E-56C69D7D8421}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3AB5A936-924E-4BA4-855E-56C69D7D8421}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
