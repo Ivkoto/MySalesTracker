@@ -32,11 +32,12 @@
                  <div class="day-block mt-3">
                      <div class="day-title">@day.DayLabel</div>
                      <div class="hour-grid mt-2">
-                         @foreach (var hour in day.Hours)
-                         {
-                             var bg = WeatherCalculations.GetTemperatureBackgroundColor(hour.Temp);
-                             var edge = WeatherCalculations.GetTemperatureBorderColor(hour.Temp);
-                             <div class="hour-card" style="background-color: @bg; border-color:@edge">
+                        @foreach (var hour in day.Hours)
+                        {
+                            var bg = WeatherCalculations.GetRainBackgroundColor(hour.Mm);
+                            var edge = WeatherCalculations.GetRainBorderColor(hour.Mm);
+                            var textColor = WeatherCalculations.GetRainTextColor(hour.Mm);
+                            <div class="hour-card" style="background-color: @bg; border-color:@edge; color:@textColor">
                                  <div class="hour-time">@hour.TimeLabel</div>
                                  <div class="hour-values">
                                      <span class="me-2">@hour.Temp.ToString("0.#", CultureInfo.InvariantCulture)&deg;C</span>
