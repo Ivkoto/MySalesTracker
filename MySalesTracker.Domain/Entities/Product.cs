@@ -9,7 +9,7 @@ public sealed class Product
     public int ProductId { get; init; }
 
     [StringLength(50)]
-    public string Name { get; init; } = null!;
+    public required string Name { get; init; }
 
     public Brand Brand { get; init; }
 

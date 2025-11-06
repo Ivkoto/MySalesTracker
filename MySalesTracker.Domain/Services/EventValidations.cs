@@ -40,14 +40,9 @@ public static class EventValidations
     /// <param name="endDate">End date.</param>
     /// <returns>List of dates in the range.</returns>
     public static List<DateOnly> GenerateDateRange(DateOnly startDate, DateOnly endDate)
-    {
-        var dates = new List<DateOnly>();
-        for (var d = startDate; d <= endDate; d = d.AddDays(1))
-        {
-            dates.Add(d);
-        }
-        return dates;
-    }
+        => Enumerable.Range(0, endDate.DayNumber - startDate.DayNumber + 1)
+            .Select(i => startDate.AddDays(i))
+            .ToList();
 
     /// <summary>
     /// Calculates the number of days in an event.

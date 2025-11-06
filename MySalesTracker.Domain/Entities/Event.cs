@@ -9,13 +9,13 @@ public sealed class Event
     public int EventId { get; init; }
 
     [StringLength(50)]
-    public string Name { get; init; } = null!;
+    public required string Name { get; init; }
 
     [Column(TypeName = "date")]
-    public DateOnly StartDate { get; init; }
+    public required DateOnly StartDate { get; init; }
 
     [Column(TypeName = "date")]
-    public DateOnly EndDate { get; init; }
+    public required DateOnly EndDate { get; init; }
 
     public ICollection<EventDay> Days { get; init; } = [];
 }

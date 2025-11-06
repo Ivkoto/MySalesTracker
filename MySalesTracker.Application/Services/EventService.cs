@@ -78,12 +78,9 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
 
             logger.LogInformation("Creating event '{Name}' from {StartDate} to {EndDate}", name, startDate, endDate);
 
-            var evt = new Event { Name = name, StartDate = startDate, EndDate = endDate };
             var dates = EventValidations.GenerateDateRange(startDate, endDate);
-            foreach (var date in dates)
-            {
-                evt.Days.Add(new EventDay { Date = date });
-            }
+            var days = dates.Select(d => new EventDay { Date = d }).ToList();
+            var evt = new Event { Name = name, StartDate = startDate, EndDate = endDate, Days = days };
 
             var savedEvent = await eventRepository.CreateEvent(evt, ct);
 
@@ -93,7 +90,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create event '{Name}'", name);
-            throw;
+            return (false, null, "Failed to create event due to an error.");
         }
     }
 
