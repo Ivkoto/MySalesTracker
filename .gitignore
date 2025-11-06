@@ -9,6 +9,7 @@ obj/
 *.suo
 *.userosscache
 *.sln.docstates
+*.cursorrules
 
 # VS Code
 .vscode/

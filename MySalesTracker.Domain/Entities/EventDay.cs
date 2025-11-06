@@ -14,7 +14,7 @@ public sealed class EventDay
     public Event Event { get; init; } = null!;
 
     [Column(TypeName = "date")]
-    public DateOnly Date { get; init; }
+    public required DateOnly Date { get; init; }
 
     public ICollection<Sale> Sales { get; init; } = [];
     public ICollection<Expense> Expenses { get; init; } = [];

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using MySalesTracker.Application.Extensions;
-using MySalesTracker.Infrastructure.Hubs;
 using MySalesTracker.Infrastructure.Persistence;
 using MySalesTracker.Infrastructure.Extensions;
 using MySalesTracker.Web.Components;
@@ -36,12 +35,6 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
-
-var requiredHubPathConfig = app.Configuration["SignalR:SalesHubPath"];
-if (string.IsNullOrWhiteSpace(requiredHubPathConfig))
-{
-    throw new InvalidOperationException("SignalR:SalesHubPath must be configured in appsettings.json!!!");
-}
-app.MapHub<SalesHub>(requiredHubPathConfig);
+app.MapInfrastructureEndpoints(builder.Configuration);
 
 app.Run();
