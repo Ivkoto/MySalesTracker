@@ -93,7 +93,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create event '{Name}'", name);
-            return (false, null, "Failed to create event due to an error.");
+            throw;
         }
     }
 
