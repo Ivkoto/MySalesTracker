@@ -144,7 +144,6 @@ The project follows Clean Architecture principles with clear separation of conce
 
 ## Branching Strategy
 
-- `main`: Production-ready code
 - `feature/*`: Individual feature branches
 - `db/*`: Database related changes branch
 - `bug/*`: Bug fix branches
