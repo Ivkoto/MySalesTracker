@@ -153,7 +153,7 @@ The project follows Clean Architecture principles with clear separation of conce
 ## Troubleshooting
 
 - **PWA not installing on mobile**: Ensure you're accessing the app via HTTPS (use ngrok for local testing or deploy to hosting)
-- **PWA icons not showing**: Check that `wwwroot/icons/` contains all 4 PNG files (icon-192.png, icon-512.png, and maskable versions)
+- **PWA icons not showing**: Check that `wwwroot/icons/` contains all 4 PNG files (icon-192.png, icon-512.png, icon-192-maskable.png, and icon-512-maskable.png)
 - **Missing SignalR configuration**: If you see `InvalidOperationException: SignalR:SalesHubPath is not configured`, ensure `appsettings.json` contains the `SignalR:SalesHubPath` setting.
 - **EF decimal precision warnings**: The context configures money fields with precision; ensure migrations are up to date.
 - **Missing Bootstrap icons**: Check the Bootstrap Icons CDN link in `Components/App.razor`.
