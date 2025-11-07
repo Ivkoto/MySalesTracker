@@ -41,6 +41,11 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 
 ## Current features
 
+- **Progressive Web App (PWA)** - installable on desktop and mobile devices
+  - Add to home screen on Android/iOS
+  - Opens in standalone mode (no browser UI)
+  - App icons and splash screens
+  - Requires HTTPS for mobile installation
 - Events and event days
 - Real-time sales sync across devices (SignalR push per event day)
 - Sales entry per product with brand-based rules
@@ -65,9 +70,17 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 ## Development tips
 
 - Hot Reload: edit Razor/C# and refresh; use F5 (Debug) for best experience.
-- Mobile testing on device:
-  - Run the app with LAN binding, e.g.: `dotnet run --project MySalesTracker.Web --urls http://0.0.0.0:5150`
-  - Find your PC IP (e.g., 192.168.1.50), then open `http://192.168.1.50:5150/events` on your phone.
+- **PWA Testing**:
+  - Desktop: Install directly from Chrome/Edge (install icon in address bar)
+  - Mobile (local network): 
+    - Run the app with LAN binding, e.g.: `dotnet run --project MySalesTracker.Web --urls http://0.0.0.0:5150`
+    - Find your PC IP (e.g., 192.168.1.50), then open `http://192.168.1.50:5150` on your phone
+    - Note: PWA installation on mobile requires HTTPS
+  - Mobile (with HTTPS via ngrok):
+    - Run your app locally
+    - Start ngrok: `ngrok http 5000` (or your app's port)
+    - Use the ngrok HTTPS URL on your phone to test PWA installation
+    - Install from Chrome/Safari: "Add to Home Screen" or "Install app"
 - Decimal keypad on mobile: inputs use `inputmode="decimal"` where needed.
 - Icons: Bootstrap Icons are included via CDN in `Components/App.razor`.
 
@@ -129,16 +142,21 @@ The project follows Clean Architecture principles with clear separation of conce
 - `Components/`
   - `Pages/` - Razor pages (`Events.razor`, `EventDay.razor`, `Weather.razor`)
   - `Layout/` - Layout components (`MainLayout.razor`, `NavMenu.razor`)
+  - `App.razor` - Main app component with PWA meta tags
 - `State/` - UI state management (`WeatherState`)
 - `Extensions/` - Helper extensions (`EnumExtensions`)
 - `wwwroot/` - Static assets (CSS, JS, images)
+  - `manifest.json` - PWA manifest configuration
+  - `icons/` - PWA app icons (192x192, 512x512)
 - `Program.cs` - Application entry point and DI composition root
 
 ## Troubleshooting
 
+- **PWA not installing on mobile**: Ensure you're accessing the app via HTTPS (use ngrok for local testing or deploy to hosting)
+- **PWA icons not showing**: Check that `wwwroot/icons/` contains all 4 PNG files (icon-192.png, icon-512.png, icon-192-maskable.png, and icon-512-maskable.png)
 - **Missing SignalR configuration**: If you see `InvalidOperationException: SignalR:SalesHubPath is not configured`, ensure `appsettings.json` contains the `SignalR:SalesHubPath` setting.
 - **EF decimal precision warnings**: The context configures money fields with precision; ensure migrations are up to date.
-- **Missing icons**: Check the Bootstrap Icons CDN link in `Components/App.razor`.
+- **Missing Bootstrap icons**: Check the Bootstrap Icons CDN link in `Components/App.razor`.
 - **Client error overlay**: Blazor shows `#blazor-error-ui` when a client/circuit error occurs.
 - **CSS not loading**: Verify `MySalesTracker.Web.styles.css` reference in `App.razor` matches the generated scoped CSS bundle name.
 
@@ -148,14 +166,6 @@ The project follows Clean Architecture principles with clear separation of conce
 - `db/*`: Database related changes branch
 - `bug/*`: Bug fix branches
 - `fix/*`: Small fixes and refactoring branches
-
-
-## Next moves / ideas
-
-- Add Payments panel for Cash/Card/Revolut and show differences vs sales.
-- Add Expenses for the day.
-- Add Brand/Category summary page (your blue "Обороти" box).
-- Add Admin CRUD for Products/Rules (so you can extend logic without code).
 
 ## Open-source component libraries for better visual experiance
 
