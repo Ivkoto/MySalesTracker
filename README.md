@@ -160,7 +160,7 @@ The project follows Clean Architecture principles with clear separation of conce
 5. Logs will be written to `logs/stdout_*.log` (one level above wwwroot)
 
 ### Data Protection Keys
-The app stores encryption keys in `DataProtection-Keys/` folder (not in system profile). This prevents permission issues on shared hosting and allows key sharing across deployments.
+The app stores encryption keys in the `DataProtection-Keys/` folder (not in the system profile). This prevents permission issues on shared hosting. Each environment should generate its own keys automatically on first run.
 
 ### SignalR Configuration
 - Configure hub path in `appsettings.json`: `SignalR:SalesHubPath`

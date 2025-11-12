@@ -7,9 +7,16 @@ using MySalesTracker.Web.State;
 using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddDataProtection()
+
+var dataProtection = builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")))
     .SetApplicationName("MySalesTracker");
+
+// Encrypt keys at rest on Windows using DPAPI
+if (OperatingSystem.IsWindows())
+{
+    dataProtection.ProtectKeysWithDpapi();
+}
 
 builder.Services
     .AddRazorComponents()
