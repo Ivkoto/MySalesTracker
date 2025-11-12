@@ -150,15 +150,40 @@ The project follows Clean Architecture principles with clear separation of conce
   - `icons/` - PWA app icons (192x192, 512x512)
 - `Program.cs` - Application entry point and DI composition root
 
+## Deployment
+
+### IIS/Windows Hosting
+1. Publish: `dotnet publish -c Release -o ./publish`
+2. Ensure `web.config` is in the publish output root (not in wwwroot)
+3. Configure IIS Application Pool to **"No Managed Code"**
+4. Set `ASPNETCORE_ENVIRONMENT` in `web.config` (Production/Development)
+5. Logs will be written to `logs/stdout_*.log` (one level above wwwroot)
+
+### Data Protection Keys
+The app stores encryption keys in the `DataProtection-Keys/` folder (not in the system profile). This prevents permission issues on shared hosting. Each environment should generate its own keys automatically on first run.
+
+### SignalR Configuration
+- Configure hub path in `appsettings.json`: `SignalR:SalesHubPath`
+- Supports multiple transports: WebSockets, Server-Sent Events, Long Polling
+- Optimized timeouts for mobile connections (60s client timeout, 15s keep-alive)
+
+### Security & SEO
+- **Private app**: `robots.txt` and `noindex` meta tag prevent search engine crawling
+- **Secrets**: `appsettings.Production.json` is gitignored and must be created manually on server
+- **Publish profiles**: Excluded from repository to protect deployment credentials
+
 ## Troubleshooting
 
+- **Data Protection errors**: If you see `Access denied` for DataProtection-Keys, ensure the app has write permissions to its root folder
 - **PWA not installing on mobile**: Ensure you're accessing the app via HTTPS (use ngrok for local testing or deploy to hosting)
 - **PWA icons not showing**: Check that `wwwroot/icons/` contains all 4 PNG files (icon-192.png, icon-512.png, icon-192-maskable.png, and icon-512-maskable.png)
-- **Missing SignalR configuration**: If you see `InvalidOperationException: SignalR:SalesHubPath is not configured`, ensure `appsettings.json` contains the `SignalR:SalesHubPath` setting.
-- **EF decimal precision warnings**: The context configures money fields with precision; ensure migrations are up to date.
-- **Missing Bootstrap icons**: Check the Bootstrap Icons CDN link in `Components/App.razor`.
-- **Client error overlay**: Blazor shows `#blazor-error-ui` when a client/circuit error occurs.
-- **CSS not loading**: Verify `MySalesTracker.Web.styles.css` reference in `App.razor` matches the generated scoped CSS bundle name.
+- **Missing SignalR configuration**: If you see `InvalidOperationException: SignalR:SalesHubPath is not configured`, ensure `appsettings.json` contains the `SignalR:SalesHubPath` setting
+- **SignalR connection issues**: Check that all three transports (WebSockets, SSE, Long Polling) are enabled in IIS
+- **EF decimal precision warnings**: The context configures money fields with precision; ensure migrations are up to date
+- **Missing Bootstrap icons**: Check the Bootstrap Icons CDN link in `Components/App.razor`
+- **Client error overlay**: Blazor shows `#blazor-error-ui` when a client/circuit error occurs
+- **CSS not loading**: Verify `MySalesTracker.Web.styles.css` reference in `App.razor` matches the generated scoped CSS bundle name
+- **500 errors on startup**: Check logs in `logs/stdout_*.log` for detailed error messages
 
 ## Branching Strategy
 
@@ -189,4 +214,3 @@ _NuGet packages. Add, register their services in Program.cs, include their CSS/J
 ---
 
 Maintained for internal use. Contributions or suggestions are welcome.
-

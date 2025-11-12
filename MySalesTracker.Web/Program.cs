@@ -4,14 +4,25 @@ using MySalesTracker.Infrastructure.Persistence;
 using MySalesTracker.Infrastructure.Extensions;
 using MySalesTracker.Web.Components;
 using MySalesTracker.Web.State;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var dataProtection = builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")))
+    .SetApplicationName("MySalesTracker");
+
+// Encrypt keys at rest on Windows using DPAPI
+if (OperatingSystem.IsWindows())
+{
+    dataProtection.ProtectKeysWithDpapi();
+}
 
 builder.Services
     .AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
 builder.Services.AddApplicationServices();
 builder.Services.AddScoped<WeatherState>();
 
