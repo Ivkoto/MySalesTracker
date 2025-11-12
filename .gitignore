@@ -42,6 +42,10 @@ Thumbs.db
 
 # Ignore secrets/configs (if any)
 appsettings.*.local.json
+appsettings.Production.json
+
+# Ignore publish profiles (deployment-specific)
+**/Properties/PublishProfiles/
  
 # VS cache 
 .vs/

@@ -4,14 +4,18 @@ using MySalesTracker.Infrastructure.Persistence;
 using MySalesTracker.Infrastructure.Extensions;
 using MySalesTracker.Web.Components;
 using MySalesTracker.Web.State;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")))
+    .SetApplicationName("MySalesTracker");
 
 builder.Services
     .AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
 builder.Services.AddApplicationServices();
 builder.Services.AddScoped<WeatherState>();
 

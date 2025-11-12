@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using MySalesTracker.Infrastructure.Hubs;
@@ -15,7 +16,12 @@ public static class EndpointConfiguration
             throw new InvalidOperationException("SignalR:SalesHubPath must be configured in appsettings.json");
         }
 
-        endpoints.MapHub<SalesHub>(hubPath);
+        endpoints.MapHub<SalesHub>(hubPath, options =>
+        {
+            options.Transports = HttpTransportType.WebSockets |
+                                 HttpTransportType.ServerSentEvents |
+                                 HttpTransportType.LongPolling;
+        });
 
         return endpoints;
     }
