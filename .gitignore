@@ -44,6 +44,9 @@ Thumbs.db
 appsettings.*.local.json
 appsettings.Production.json
 
+# Data Protection Keys
+**/DataProtection-Keys/
+
 # Ignore publish profiles (deployment-specific)
 **/Properties/PublishProfiles/
  
