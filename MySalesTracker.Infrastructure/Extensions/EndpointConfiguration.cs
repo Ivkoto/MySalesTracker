@@ -36,6 +36,7 @@ public static class EndpointConfiguration
         {
             await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             context.Response.Redirect("/login");
+            
         }).AllowAnonymous();
 
         return endpoints;

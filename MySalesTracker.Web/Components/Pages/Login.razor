@@ -136,7 +136,6 @@
 @code {
     [SupplyParameterFromForm]
     private LoginModel loginModel { get; set; } = new();
-    
     private string? errorMessage;
     private bool isSubmitting;
 
@@ -211,7 +210,6 @@
                 // Reset rate limit attempts on successful login
                 Cache.Remove(cacheKey);
 
-                // Redirect to events page
                 Navigation.NavigateTo("/events", forceLoad: true);
             }
             else
