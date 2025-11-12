@@ -1,4 +1,5 @@
 @page "/day/{id:int}"
+@attribute [Authorize]
 @inject EventService EventSvc
 @inject ProductService ProductSvc
 @inject PriceRuleService PriceRuleSvc
@@ -199,7 +200,7 @@ else
 
         if (price is null)
         {
-            validationMessage = "Въведете цена за продукта вЕ, без пари ли го даваш 👀?";
+            validationMessage = "Въведете цена за продукта, без пари ли го даваш 👀?";
             return;
         }
 

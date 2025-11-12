@@ -1,0 +1,253 @@
+@page "/login"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+@inject IConfiguration Configuration
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IMemoryCache Cache
+
+<PageTitle>Login</PageTitle>
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <i class="bi bi-lock-fill"></i>
+            <h1>TOTEM Sales Tracker</h1>
+            <p class="text-muted">Enter PIN to access</p>
+        </div>
+
+        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin" FormName="LoginForm">
+            <DataAnnotationsValidator />
+            
+            <div class="mb-3">
+                <InputText 
+                    type="password" 
+                    @bind-Value="loginModel.Pin" 
+                    class="form-control form-control-lg text-center" 
+                    placeholder="Enter PIN"
+                    autocomplete="off"
+                    maxlength="50" />
+                <ValidationMessage For="() => loginModel.Pin" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+                </div>
+            }
+
+            <button type="submit" class="btn btn-primary btn-lg w-100" disabled="@isSubmitting">
+                @if (isSubmitting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    <span>Verifying...</span>
+                }
+                else
+                {
+                    <span>Login</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="login-footer">
+            <small class="text-muted">
+                <i class="bi bi-shield-lock"></i> Secure access only
+            </small>
+        </div>
+    </div>
+</div>
+
+<style>
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+    }
+
+    .login-card {
+        background: white;
+        border-radius: 16px;
+        padding: 48px 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 420px;
+        width: 100%;
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .login-header i {
+        font-size: 48px;
+        color: #667eea;
+        margin-bottom: 16px;
+    }
+
+    .login-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 8px;
+    }
+
+    .login-header p {
+        font-size: 14px;
+        margin: 0;
+    }
+
+    .form-control-lg {
+        padding: 16px;
+        font-size: 20px;
+        letter-spacing: 2px;
+        border-radius: 8px;
+    }
+
+    .btn-lg {
+        padding: 16px;
+        font-weight: 600;
+        border-radius: 8px;
+        margin-top: 8px;
+    }
+
+    .login-footer {
+        text-align: center;
+        margin-top: 24px;
+        padding-top: 24px;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .alert {
+        border-radius: 8px;
+        margin-bottom: 16px;
+    }
+
+    @@media (max-width: 576px) {
+        .login-card {
+            padding: 32px 24px;
+        }
+    }
+</style>
+
+@code {
+    [SupplyParameterFromForm]
+    private LoginModel loginModel { get; set; } = new();
+    private string? errorMessage;
+    private bool isSubmitting;
+
+    private async Task HandleLogin()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            errorMessage = "Unable to process login request.";
+            return;
+        }
+
+        // Get client IP for rate limiting
+        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var cacheKey = $"LoginAttempts_{clientIp}";
+
+        // Get or create attempt data from cache
+        var attemptData = Cache.GetOrCreate(cacheKey, entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+            return new LoginAttemptData();
+        });
+
+        // Check if locked out
+        if (attemptData!.LockoutUntil.HasValue && DateTime.UtcNow < attemptData.LockoutUntil.Value)
+        {
+            var remainingSeconds = (int)(attemptData.LockoutUntil.Value - DateTime.UtcNow).TotalSeconds;
+            errorMessage = $"Too many attempts. Try again in {remainingSeconds} seconds.";
+            return;
+        }
+
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            await Task.Delay(500); // Prevent timing attacks
+
+            var configuredPin = Configuration["AuthPin:Pin"];
+            
+            if (string.IsNullOrWhiteSpace(configuredPin))
+            {
+                errorMessage = "Authentication not configured properly.";
+                return;
+            }
+
+            if (loginModel.Pin == configuredPin)
+            {
+                // Create claims for the authenticated user
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Name, "AuthenticatedUser"),
+                    new Claim("AuthMethod", "PIN"),
+                    new Claim("LoginTime", DateTime.UtcNow.ToString("O")),
+                    new Claim("ClientIP", clientIp)
+                };
+
+                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var principal = new ClaimsPrincipal(identity);
+
+                // Sign in with ASP.NET Core Authentication
+                await httpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    principal,
+                    new AuthenticationProperties
+                    {
+                        IsPersistent = true, // Remember across browser sessions
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30),
+                        AllowRefresh = true
+                    });
+
+                // Reset rate limit attempts on successful login
+                Cache.Remove(cacheKey);
+
+                Navigation.NavigateTo("/events", forceLoad: true);
+            }
+            else
+            {
+                // Failed login attempt
+                attemptData.AttemptCount++;
+                
+                if (attemptData.AttemptCount >= 5)
+                {
+                    attemptData.LockoutUntil = DateTime.UtcNow.AddMinutes(5);
+                    errorMessage = "Too many failed attempts. Locked for 5 minutes.";
+                }
+                else
+                {
+                    errorMessage = $"Invalid PIN. Attempt {attemptData.AttemptCount} of 5.";
+                }
+
+                // Update cache with new attempt data
+                Cache.Set(cacheKey, attemptData, TimeSpan.FromMinutes(10));
+
+                loginModel.Pin = string.Empty;
+            }
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    public sealed class LoginModel
+    {
+        [Required(ErrorMessage = "PIN is required")]
+        public string Pin { get; set; } = string.Empty;
+    }
+
+    private sealed class LoginAttemptData
+    {
+        public int AttemptCount { get; set; }
+        public DateTime? LockoutUntil { get; set; }
+    }
+}
