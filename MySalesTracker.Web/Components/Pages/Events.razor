@@ -28,12 +28,16 @@
     {
         <li>
             <h4>@b.Name</h4> (@b.StartDate → @b.EndDate)
+            <div class="mb-2">
+                <a href="@($"/event/{b.EventId}/summary")" class="btn btn-outline-success btn-sm">Обща статистика</a>
+            </div>
             <div>
+                @* TODO: This OrderBy does not order the events by event day; it orders them by Event ID in the DB call that EF makes. *@
                 @foreach (var d in b.Days.OrderBy(x => x.Date))
                 {
                     @* <li><a href="@($"/day/{d.EventDayId}")">@d.Date</a></li> *@
-                    <a href="@($"/day/{d.EventDayId}")" class="d-inline-block p-2 m-1 border rounded text-decoration-none">
-                        <strong>@d.Date.ToString("dd dddd")</strong>
+                    <a href="@($"/day/{d.EventDayId}")" class="d-inline-block p-2 m-1 border rounded text-decoration-none" style="width: 4rem; text-align: center;">
+                        <strong>@GetFormattedDate(d.Date)</strong>
                     </a>
                 }
             </div>
@@ -61,7 +65,7 @@
             return;
         }
 
-        events.Insert(0, result.Event!);
+        events.Insert(0, result.Data!);
 
         /* TODO: @IvayloK - replace the lines above if you need to reload all the events and keep the data updated on all the devices
         in cases where other users might have created events simultaneously */
@@ -73,5 +77,22 @@
         start = DateOnly.FromDateTime(DateTime.Today);
         end = DateOnly.FromDateTime(DateTime.Today);
         errorMessage = null;
+    }
+
+    string GetFormattedDate(DateOnly date)
+    {
+        var dayOfWeek = date.DayOfWeek;
+        var abbreviation = dayOfWeek switch
+        {
+            DayOfWeek.Monday => "пн",
+            DayOfWeek.Tuesday => "вт",
+            DayOfWeek.Wednesday => "ср",
+            DayOfWeek.Thursday => "чт",
+            DayOfWeek.Friday => "пт",
+            DayOfWeek.Saturday => "сб",
+            DayOfWeek.Sunday => "нд",
+            _ => ""
+        };
+        return $"{date.Day:00} {abbreviation}";
     }
 }

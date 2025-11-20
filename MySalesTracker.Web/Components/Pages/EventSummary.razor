@@ -1,0 +1,128 @@
+@page "/event/{id:int}/summary"
+@attribute [Authorize]
+@inject EventService EventSvc
+@inject NavigationManager Nav
+
+@if (isLoading)
+{
+    <p>Loading…</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger py-2 px-3 mb-3">
+        @errorMessage
+    </div>
+    <p><a href="/events">↪ Назад към събития</a></p>
+}
+else if (summary is not null)
+{
+    <h2>Обща статистика - @summary.EventName</h2>
+
+    <p><a href="/events">⬅️ Назад към събития</a> | (@summary.StartDate.ToString("dd.MM", Bg) → @summary.EndDate.ToString("dd.MM", Bg))</p>
+
+    <div class="mt-4">
+        <table class="table table-bordered align-middle" style="max-width: 600px;">
+            <thead class="table-primary">
+                <tr>
+                    <th class="px-3">Целия базар</th>
+                    <th class="px-3 text-end">Стойност</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="px-3">Брой Тотем</td>
+                    <td class="px-3 text-end fw-bold">@summary.TotemCount</td>
+                </tr>
+                <tr>
+                    <td class="px-3">Брой Гора</td>
+                    <td class="px-3 text-end fw-bold">@summary.CandlesCount</td>
+                </tr>
+                <tr>
+                    <td class="px-3">Оборот Тотем</td>
+                    <td class="px-3 text-end">@summary.TotemRevenue.ToString("0.00", Bg) лв</td>
+                </tr>
+                <tr>
+                    <td class="px-3">Оборот Керамика</td>
+                    <td class="px-3 text-end">@summary.CeramicsRevenue.ToString("0.00", Bg) лв</td>
+                </tr>
+                <tr>
+                    <td class="px-3">Оборот Гора</td>
+                    <td class="px-3 text-end">@summary.CandlesRevenue.ToString("0.00", Bg) лв</td>
+                </tr>
+                <tr class="table-light">
+                    <td class="px-3 fw-bold">Оборот Общо</td>
+                    <td class="px-3 fw-bold text-end">@summary.TotalRevenue.ToString("0.00", Bg) лв</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="table table-bordered align-middle mt-4" style="max-width: 600px;">
+            <thead class="table-info">
+                <tr>
+                    <th class="px-3">Налични - записани</th>
+                    <th class="px-3 text-end">Сума (лв)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="px-3">Налични кеш оборот</td>
+                    <td class="px-3 text-end">@summary.CashTotal.ToString("0.00", Bg) лв</td>
+                </tr>
+                <tr>
+                    <td class="px-3">Налични карта оборот</td>
+                    <td class="px-3 text-end">@summary.CardTotal.ToString("0.00", Bg) лв</td>
+                </tr>
+                <tr>
+                    <td class="px-3">Налични Revolut Лидия</td>
+                    <td class="px-3 text-end">@summary.RevolutLidiaTotal.ToString("0.00", Bg) лв</td>
+                </tr>
+                <tr>
+                    <td class="px-3">Налични Revolut Ивайло</td>
+                    <td class="px-3 text-end">@summary.RevolutIvayloTotal.ToString("0.00", Bg) лв</td>
+                </tr>
+                <tr class="table-light">
+                    <td class="px-3 fw-bold">СУМА</td>
+                    <td class="px-3 fw-bold text-end">@totalPayments.ToString("0.00", Bg) лв</td>
+                </tr>
+                <tr class="@(difference >= 0 ? "table-success" : "table-danger")">
+                    <td class="px-3 fw-bold">разлика</td>
+                    <td class="px-3 fw-bold text-end">@difference.ToString("0.00", Bg) лв</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter] public int id { get; set; }
+
+    MySalesTracker.Application.DTOs.EventSummary? summary;
+    decimal totalPayments;
+    decimal difference;
+    string? errorMessage;
+    bool isLoading = true;
+
+    static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await EventSvc.GetEventSummaryAsync(id);
+        isLoading = false;
+
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage;
+            return;
+        }
+
+        summary = result.Data;
+        
+        if (summary is not null)
+        {
+            totalPayments = summary.CashTotal + summary.CardTotal + 
+                          summary.RevolutLidiaTotal + summary.RevolutIvayloTotal;
+            difference = totalPayments - summary.TotalRevenue;
+        }
+    }
+}
+

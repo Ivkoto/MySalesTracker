@@ -210,7 +210,7 @@
                 // Reset rate limit attempts on successful login
                 Cache.Remove(cacheKey);
 
-                Navigation.NavigateTo("/events", forceLoad: true);
+                Navigation.NavigateTo("/", forceLoad: true);
             }
             else
             {

@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using MySalesTracker.Application.DTOs;
 using MySalesTracker.Application.Interfaces;
 using MySalesTracker.Domain.Entities;
+using MySalesTracker.Domain.Enums;
 using MySalesTracker.Domain.Services;
 
 namespace MySalesTracker.Application.Services;
@@ -19,6 +21,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     /// </returns>
     public async Task<List<(string, DateOnly, DateOnly)>> GetExistingEventsByYear(DateOnly year, CancellationToken cancellationToken = default)
     {
+        //TODO: ⬆️ Consider Task<SomeModel> instead of list of tuples for better clarity.
         try
         {
             return await eventRepository.GetExistingEventsByYear(year.Year, cancellationToken);
@@ -66,7 +69,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     /// <exception cref="ArgumentException">
     /// Thrown when name is empty or whitespace, or when end date is before start date.
     /// </exception>
-    public async Task<(bool Success, Event? Event, string? ErrorMessage)> CreateEventAsync(string name, DateOnly startDate, DateOnly endDate, CancellationToken ct = default)
+    public async Task<ServiceResult<Event>> CreateEventAsync(string name, DateOnly startDate, DateOnly endDate, CancellationToken ct = default)
     {
         try
         {
@@ -74,7 +77,10 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
 
             var validation = EventValidations.ValidateCreateEvent(name, startDate, endDate, existingEvents);
             if (!validation.IsValid)
-                return (false, null, validation.ErrorMessage);
+            {
+                logger.LogWarning("Event creation validation failed: {ErrorMessage}", validation.ErrorMessage);
+                return ServiceResult<Event>.FailureResult(validation.ErrorMessage);
+            }                
 
             logger.LogInformation("Creating event '{Name}' from {StartDate} to {EndDate}", name, startDate, endDate);
 
@@ -88,7 +94,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
             var savedEvent = await eventRepository.CreateEvent(evt, ct);
 
             logger.LogInformation("Successfully created event {EventId} with {DayCount} days", savedEvent.EventId, savedEvent.Days.Count);
-            return (true, savedEvent, null);
+            return ServiceResult<Event>.SuccessResult(savedEvent);
         }
         catch (Exception ex)
         {
@@ -112,7 +118,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
         {
             var evtDay = await eventRepository.GetEventDayById(eventDayId, ct);
 
-            if (evtDay == null)
+            if (evtDay is null)
             {
                 logger.LogWarning("EventDay with ID {EventDayId} not found", eventDayId);
             }
@@ -123,6 +129,135 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
         {
             logger.LogError(ex, "Database error while retrieving EventDay with ID {EventDayId}", eventDayId);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets aggregated summary statistics for an entire event across all its days.
+    /// </summary>
+    /// <param name="eventId">The ID of the event.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// A <see cref="ServiceResult{EventSummary}"/> representing the operation result. On success
+    /// the result contains the aggregated <see cref="EventSummary"/>; on failure it contains
+    /// an error message explaining the problem.
+    /// </returns>
+    public async Task<ServiceResult<EventSummary>> GetEventSummaryAsync(int eventId, CancellationToken ct = default)
+    {
+        try
+        {
+            var evt = await eventRepository.GetEventWithAllData(eventId, ct);
+
+            if (evt is null)
+            {
+                logger.LogWarning("Event with ID {EventId} not found", eventId);
+                return ServiceResult<EventSummary>.FailureResult("Събитието не е намерено");
+            }
+
+            // Aggregate all sales across all event days
+            var allSales = evt.Days.SelectMany(d => d.Sales).ToList();
+            var allPayments = evt.Days.SelectMany(d => d.PaymentsCounted).ToList();
+
+            // Calculate counts by brand (only TOTEM and Candles)
+            var totemCount = allSales
+                .Where(s => s.Product.Brand == Brand.Totem)
+                .Sum(s => s.QuantityUnits);
+
+            var candlesCount = allSales
+                .Where(s => s.Product.Brand == Brand.Candles)
+                .Sum(s => s.QuantityUnits);
+
+            // Calculate revenue by brand (price - discount)
+            var totemRevenue = allSales
+                .Where(s => s.Product.Brand == Brand.Totem)
+                .Sum(s => s.Price - s.DiscountValue);
+
+            var ceramicsRevenue = allSales
+                .Where(s => s.Product.Brand == Brand.Ceramics)
+                .Sum(s => s.Price - s.DiscountValue);
+
+            var candlesRevenue = allSales
+                .Where(s => s.Product.Brand == Brand.Candles)
+                .Sum(s => s.Price - s.DiscountValue);
+
+            var totalRevenue = totemRevenue + ceramicsRevenue + candlesRevenue;
+
+            // Calculate payment totals by method
+            var cashTotal = allPayments
+                .Where(p => p.Method == PaymentMethod.Cash)
+                .Sum(p => p.Amount);
+
+            var cardTotal = allPayments
+                .Where(p => p.Method == PaymentMethod.Card)
+                .Sum(p => p.Amount);
+
+            var revolutLidiaTotal = allPayments
+                .Where(p => p.Method == PaymentMethod.RevolutLidia)
+                .Sum(p => p.Amount);
+
+            var revolutIvayloTotal = allPayments
+                .Where(p => p.Method == PaymentMethod.RevolutIvaylo)
+                .Sum(p => p.Amount);
+
+            logger.LogInformation(
+                "Generated summary for Event {EventId}: TotalRevenue={TotalRevenue}, TotalPayments={TotalPayments}",
+                eventId, totalRevenue, cashTotal + cardTotal + revolutLidiaTotal + revolutIvayloTotal);
+
+            var summary = new EventSummary
+            {
+                EventName = evt.Name,
+                StartDate = evt.StartDate,
+                EndDate = evt.EndDate,
+                TotemCount = totemCount,
+                CandlesCount = candlesCount,
+                TotemRevenue = totemRevenue,
+                CeramicsRevenue = ceramicsRevenue,
+                CandlesRevenue = candlesRevenue,
+                TotalRevenue = totalRevenue,
+                CashTotal = cashTotal,
+                CardTotal = cardTotal,
+                RevolutLidiaTotal = revolutLidiaTotal,
+                RevolutIvayloTotal = revolutIvayloTotal
+            };
+
+            return ServiceResult<EventSummary>.SuccessResult(summary);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get event summary for Event {EventId}", eventId);
+            return ServiceResult<EventSummary>.FailureResult($"Грешка при зареждане на статистика: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Updates the starting petty cash amount for a specific <see cref="EventDay"/>.
+    /// </summary>
+    /// <param name="eventDayId">Identifier of the event day to update.</param>
+    /// <param name="amount">New starting petty cash amount; if null, the value is cleared.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// A <see cref="ServiceResult{EventDay}"/> containing the updated <see cref="EventDay"/>
+    /// when successful, otherwise a failure result with an error message.
+    /// </returns>
+    public async Task<ServiceResult<EventDay>> UpdateStartingPettyCash(int eventDayId, decimal? amount, CancellationToken ct = default)
+    {
+        try
+        {
+            var evtDay = await eventRepository.UpdateStartingPettyCash(eventDayId, amount, ct);
+
+            if (evtDay is null)
+            {
+                logger.LogWarning("EventDay with {ID} cannot be found", eventDayId);
+                return ServiceResult<EventDay>.FailureResult("Денят не е намерен");
+            }
+
+            logger.LogInformation("Updated StartingPettyCash for EventDay {EventDayId}", eventDayId);
+            return ServiceResult<EventDay>.SuccessResult(evtDay, "Взети Оборотни са записани!");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error while updating StartingPettyCash for EventDay {EventDayId}", eventDayId);
+            return ServiceResult<EventDay>.FailureResult($"Грешка при обновяване: {ex.Message}");
         }
     }
 }

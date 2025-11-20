@@ -16,6 +16,9 @@ public sealed class EventDay
     [Column(TypeName = "date")]
     public required DateOnly Date { get; init; }
 
+    [Column(TypeName = "decimal(8,2)")]
+    public decimal? StartingPettyCash { get; set; }
+
     public ICollection<Sale> Sales { get; init; } = [];
     public ICollection<Expense> Expenses { get; init; } = [];
     public ICollection<Payment> PaymentsCounted { get; init; } = [];

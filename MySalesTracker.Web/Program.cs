@@ -23,6 +23,12 @@ builder.Services
     .AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddServerSideBlazor(options => {
+  options.DetailedErrors = builder.Environment.IsDevelopment();
+  options.DisconnectedCircuitMaxRetained = 5;
+  options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(3);
+});
+
 builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
 builder.Services.AddApplicationServices();
 builder.Services.AddScoped<WeatherState>();
