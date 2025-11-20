@@ -1,0 +1,353 @@
+@page "/day/{id:int}/report"
+@attribute [Authorize]
+@inject EventService EventSvc
+@inject PaymentService PaymentSvc
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+@if (day is null)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <h2>Дневен Отчет - @day.Date.ToDateTime(TimeOnly.MinValue).ToString("dd.MM dddd", Bg)</h2>
+
+    <p><a href="/day/@id">⬅️ Назад към продажби</a> | @day.Event.Name</p>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success py-2 px-3 mb-3">
+            @successMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(validationMessage))
+    {
+        <div class="alert alert-warning py-2 px-3 mb-3">
+            @validationMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger py-2 px-3 mb-3">
+            @errorMessage
+        </div>
+    }
+
+    <div class="mt-4">
+        <table class="table table-bordered align-middle mb-4" style="max-width: 600px;">
+            <tbody>
+                <tr>
+                    <td class="px-3 fw-bold" style="width: 50%;">Взети Оборотни</td>
+                    <td class="px-3">
+                        <input @ref="pettyCashInput" type="text" inputmode="decimal" enterkeyhint="done"
+                               autocomplete="off" class="form-control text-end"
+                               @bind="pettyCashText" @bind:event="oninput"
+                               @onblur="OnPettyCashChanged"
+                               @onfocus="@(() => SelectAllText(pettyCashInput))"
+                               placeholder="0,00 лв" />
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <table class="table table-bordered align-middle" style="max-width: 600px;">
+            <thead class="table-warning">
+                <tr>
+                    <th class="px-3">Метод на плащане</th>
+                    <th class="px-3 text-end">Сума (лв)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="px-3">налични кеш</td>
+                    <td class="px-3">
+                        <input @ref="cashInput" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
+                               class="form-control text-end" 
+                               @bind="cashText" @bind:event="oninput" @bind:after="ValidateAndCalculate"
+                               @onfocus="@(() => SelectAllText(cashInput))" />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="px-3">налични карта</td>
+                    <td class="px-3">
+                        <input @ref="cardInput" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
+                               class="form-control text-end"
+                               @bind="cardText" @bind:event="oninput" @bind:after="ValidateAndCalculate"
+                               @onfocus="@(() => SelectAllText(cardInput))" />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="px-3">Revolut Лидия</td>
+                    <td class="px-3">
+                        <input @ref="revolutLidiaInput" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
+                               class="form-control text-end"
+                               @bind="revolutLidiaText" @bind:event="oninput" @bind:after="ValidateAndCalculate"
+                               @onfocus="@(() => SelectAllText(revolutLidiaInput))" />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="px-3">Revolut Ивайло</td>
+                    <td class="px-3">
+                        <input @ref="revolutIvayloInput" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
+                               class="form-control text-end"
+                               @bind="revolutIvayloText" @bind:event="oninput" @bind:after="ValidateAndCalculate"
+                               @onfocus="@(() => SelectAllText(revolutIvayloInput))" />
+                    </td>
+                </tr>
+                <tr class="table-light">
+                    <td class="px-3 fw-bold">СУМА</td>
+                    <td class="px-3 fw-bold text-end">@totalPayments.ToString("0.00", Bg) лв</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="mt-3">
+            <button class="btn btn-primary" @onclick="SavePayments" disabled="@(isSaving || summary is null)">
+                @(isSaving ? "Записване..." : "Запази")
+            </button>
+        </div>
+
+        <table class="table table-bordered align-middle mt-4" style="max-width: 600px;">
+            <thead class="table-info">
+                <tr>
+                    <th class="px-3">Продажби по Бранд</th>
+                    <th class="px-3 text-end">Сума (лв)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (summary is not null)
+                {
+                    @if (summary.BrandSalesTotals.ContainsKey(Brand.Totem))
+                    {
+                        <tr>
+                            <td class="px-3">Общо ТОТЕМ</td>
+                            <td class="px-3 text-end">@summary.BrandSalesTotals[Brand.Totem].ToString("0.00", Bg) лв</td>
+                        </tr>
+                    }
+                    @if (summary.BrandSalesTotals.ContainsKey(Brand.Ceramics))
+                    {
+                        <tr>
+                            <td class="px-3">Общо Керамика</td>
+                            <td class="px-3 text-end">@summary.BrandSalesTotals[Brand.Ceramics].ToString("0.00", Bg) лв</td>
+                        </tr>
+                    }
+                    @if (summary.BrandSalesTotals.ContainsKey(Brand.Candles))
+                    {
+                        <tr>
+                            <td class="px-3">Общо Гора</td>
+                            <td class="px-3 text-end">@summary.BrandSalesTotals[Brand.Candles].ToString("0.00", Bg) лв</td>
+                        </tr>
+                    }
+                }
+                <tr class="table-light">
+                    <td class="px-3 fw-bold">ТОТАЛ</td>
+                    <td class="px-3 fw-bold text-end">@totalSales.ToString("0.00", Bg) лв</td>
+                </tr>
+                <tr class="@(difference >= 0 ? "table-success" : "table-danger")">
+                    <td class="px-3 fw-bold">разлика</td>
+                    <td class="px-3 fw-bold text-end">@difference.ToString("0.00", Bg) лв</td>
+                </tr>
+            </tbody>
+        </table>        
+    </div>
+}
+
+@code {
+    [Parameter] public int id { get; set; }
+
+    Domain.Entities.EventDay? day;
+    PaymentSummary? summary;
+
+    string? pettyCashText = "0,00";
+    string? cashText = "0,00";
+    string? cardText = "0,00";
+    string? revolutLidiaText = "0,00";
+    string? revolutIvayloText = "0,00";
+
+    decimal totalPayments;
+    decimal totalSales;
+    decimal difference;
+
+    string? successMessage;
+    string? errorMessage;
+    string? validationMessage;
+    bool isSaving;
+
+    ElementReference cashInput;
+    ElementReference cardInput;
+    ElementReference revolutLidiaInput;
+    ElementReference revolutIvayloInput;
+    ElementReference pettyCashInput;
+
+    static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+
+    protected override async Task OnInitializedAsync()
+    {
+        day = await EventSvc.GetEventDayByIdAsync(id);
+        if (day is null)
+        {
+            return;
+        }
+
+        var pettyCash = day.StartingPettyCash ?? 0m;
+        pettyCashText = pettyCash.ToString("0.00", Bg);
+
+        await LoadDataAsync();
+    }
+
+    async Task LoadDataAsync()
+    {
+        if (day is null) return;
+
+        var result = await PaymentSvc.GetPaymentSummaryAsync(day.EventDayId);
+        if (!result.Success)
+        {
+            errorMessage = result.ErrorMessage;
+            return;
+        }
+
+        summary = result.Data;
+
+        // Load existing payment values with comma (Bulgarian format)
+        cashText = summary!.Payments.GetValueOrDefault(PaymentMethod.Cash, 0m).ToString("0.00", Bg);
+        cardText = summary.Payments.GetValueOrDefault(PaymentMethod.Card, 0m).ToString("0.00", Bg);
+        revolutLidiaText = summary.Payments.GetValueOrDefault(PaymentMethod.RevolutLidia, 0m).ToString("0.00", Bg);
+        revolutIvayloText = summary.Payments.GetValueOrDefault(PaymentMethod.RevolutIvaylo, 0m).ToString("0.00", Bg);
+
+        CalculateTotals();
+    }
+
+    void CalculateTotals()
+    {
+        if (summary is null) return;
+
+        var cash = DecimalParsingHelper.TryParseDecimal(cashText, out var c) ? c : 0m;
+        var card = DecimalParsingHelper.TryParseDecimal(cardText, out var ca) ? ca : 0m;
+        var revolutLidia = DecimalParsingHelper.TryParseDecimal(revolutLidiaText, out var rl) ? rl : 0m;
+        var revolutIvaylo = DecimalParsingHelper.TryParseDecimal(revolutIvayloText, out var ri) ? ri : 0m;
+
+        totalPayments = cash + card + revolutLidia + revolutIvaylo;
+        totalSales = summary.TotalSales;
+        difference = totalPayments - totalSales;
+    }
+
+    void ValidateAndCalculate()
+    {
+        successMessage = null;
+        errorMessage = null;
+        validationMessage = null;
+
+        // Validate all fields
+        if (!ValidateDecimalInput(cashText, "налични кеш") ||
+            !ValidateDecimalInput(cardText, "налични карта") ||
+            !ValidateDecimalInput(revolutLidiaText, "Revolut Лидия") ||
+            !ValidateDecimalInput(revolutIvayloText, "Revolut Ивайло"))
+        {
+            return;
+        }
+
+        CalculateTotals();
+    }
+
+    bool ValidateDecimalInput(string? input, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return true; // Empty is OK, treated as 0
+        }
+
+        if (!DecimalParsingHelper.TryParseDecimal(input, out _))
+        {
+            validationMessage = $"Невалидна стойност за '{fieldName}'. Използвай само цифри и точка или запетая (например: 12.50 или 12,50)";
+            return false;
+        }
+
+        return true;
+    }
+
+    async Task SavePayments()
+    {
+        if (day is null) return;
+
+        // Validate before saving
+        validationMessage = null;
+
+        if (!ValidateDecimalInput(cashText, "налични кеш") ||
+            !ValidateDecimalInput(cardText, "налични карта") ||
+            !ValidateDecimalInput(revolutLidiaText, "Revolut Лидия") ||
+            !ValidateDecimalInput(revolutIvayloText, "Revolut Ивайло"))
+        {
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+        
+        //TODO: Remove try catch here since it's not aligned with the general code style implementation
+        try
+        {
+            var cash = DecimalParsingHelper.TryParseDecimal(cashText, out var c) ? c : 0m;
+            var card = DecimalParsingHelper.TryParseDecimal(cardText, out var ca) ? ca : 0m;
+            var revolutLidia = DecimalParsingHelper.TryParseDecimal(revolutLidiaText, out var rl) ? rl : 0m;
+            var revolutIvaylo = DecimalParsingHelper.TryParseDecimal(revolutIvayloText, out var ri) ? ri : 0m;
+
+            //TODO:Implement a bulk method on PaymentService and IPaymentRepository
+            await PaymentSvc.SavePaymentAsync(day.EventDayId, PaymentMethod.Cash, cash);
+            await PaymentSvc.SavePaymentAsync(day.EventDayId, PaymentMethod.Card, card);
+            await PaymentSvc.SavePaymentAsync(day.EventDayId, PaymentMethod.RevolutLidia, revolutLidia);
+            await PaymentSvc.SavePaymentAsync(day.EventDayId, PaymentMethod.RevolutIvaylo, revolutIvaylo);
+
+            //TODO: Move the message to the PaymentService. Use the custom ServiceResult approach as the other methods.
+            successMessage = "Плащанията са записани успешно!";
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Грешка при записване: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    async Task OnPettyCashChanged()
+    {
+        if (day is null) return;
+
+        if (!DecimalParsingHelper.TryParseDecimal(pettyCashText, out var amount))
+        {
+            validationMessage = "Невалидна стойност за Взети Оборотни";
+            return;
+        }
+        
+        var result = await EventSvc.UpdateStartingPettyCash(day.EventDayId, amount);
+        
+        if(!result.Success)
+        {
+          errorMessage = result.ErrorMessage;
+          return;        
+        }
+
+        successMessage = result.SuccessMessage;
+    }
+
+    async Task SelectAllText(ElementReference element)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("selectAllText", element);
+        }
+        catch
+        {
+            // Ignore errors on initial render or if element is not ready
+        }
+    }
+}
+

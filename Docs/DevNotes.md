@@ -32,6 +32,18 @@ dotnet ef migrations remove --project MySalesTracker.Infrastructure --startup-pr
 
 - Find your PC IP (e.g., 192.168.1.50), then open `http://192.168.1.50:5150` on your phone.
 
+## PWA Testing
+- Desktop: Install directly from Chrome/Edge (install icon in address bar)
+- Mobile (local network): 
+  - Run the app with LAN binding, e.g.: `dotnet run --project MySalesTracker.Web --urls http://0.0.0.0:5150`
+  - Find your PC IP (e.g., 192.168.1.50), then open `http://192.168.1.50:5150` on your one
+  - Note: PWA installation on mobile requires HTTPS
+- Mobile (with HTTPS via ngrok):
+  - Run your app locally
+  - Start ngrok: `ngrok http 5000` (or your app's port)
+  - Use the ngrok HTTPS URL on your phone to test PWA installation
+  - Install from Chrome/Safari: "Add to Home Screen" or "Install app"
+
 ## Production Deployment Notes
 
 ### IIS Configuration (`web.config`)
@@ -47,11 +59,7 @@ dotnet ef migrations remove --project MySalesTracker.Infrastructure --startup-pr
 ### SignalR Configuration
 - Hub path configurable via `appsettings.json`: `SignalR:SalesHubPath`
 - Supports WebSockets, Server-Sent Events, and Long Polling transports
-- Timeouts increased for mobile/slow connections:
-  - Client timeout: 60 seconds
-  - Handshake timeout: 30 seconds
-  - Keep-alive interval: 15 seconds
-  - Max message size: 100KB
+- Timeouts increased for mobile/slow connections.
 
 ### SEO & Security
 - `robots.txt` disallows all crawlers (private app)

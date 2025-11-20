@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 	<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  <!-- Added for trying to run Out Of process instead of 'inprocess'. I have the same in web.config set! -->
+  <AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>
   </PropertyGroup>
 
  <ItemGroup>

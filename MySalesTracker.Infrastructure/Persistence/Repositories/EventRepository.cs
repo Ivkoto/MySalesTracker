@@ -1,4 +1,3 @@
-using System.Threading;
 using Microsoft.EntityFrameworkCore;
 using MySalesTracker.Application.Interfaces;
 using MySalesTracker.Domain.Entities;
@@ -52,5 +51,36 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
         return evtDay;
     }
 
+    public async Task<Event?> GetEventWithAllData(int eventId, CancellationToken ct)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
+        return await context.Events
+            .Include(e => e.Days)
+                .ThenInclude(d => d.Sales)
+                    .ThenInclude(s => s.Product)
+            .Include(e => e.Days)
+                .ThenInclude(d => d.PaymentsCounted)
+            //TODO: Test and add if needed
+            //.AsSplitQuery()
+            .FirstOrDefaultAsync(e => e.EventId == eventId, ct);
+    }
+
+    public async Task<EventDay?> UpdateStartingPettyCash(int eventDayId, decimal? amount, CancellationToken ct)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(ct);
+
+        var eventDay = await context.EventDays
+            .FirstOrDefaultAsync(ed => ed.EventDayId == eventDayId, ct);
+
+        if (eventDay is null)
+        {
+            return null;
+        }
+
+        eventDay.StartingPettyCash = amount;
+        await context.SaveChangesAsync(ct);
+
+        return eventDay;
+    }
 }
