@@ -96,16 +96,6 @@ public sealed class SaleService(ISaleRepository saleRepository, ILogger<SaleServ
     }
 
     /// <summary>
-    /// Gets brand sales summaries with pre-computed aggregates for an event day.
-    /// </summary>
-    /// <param name="eventDayId">The ID of the event day.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>
-    /// A list of <see cref="BrandSalesSummary"/> objects grouped by <see cref="Brand"/>, 
-    /// each containing aggregated totals (price, discount, quantity, count) and individual sales.
-    /// Summaries are ordered by Brand descending. Returns an empty list if no sales exist for the event day.
-    /// </returns>
-    /// <summary>
     /// Gets a single sale by its ID, including product information.
     /// </summary>
     /// <param name="saleId">The ID of the sale.</param>
@@ -126,6 +116,16 @@ public sealed class SaleService(ISaleRepository saleRepository, ILogger<SaleServ
         }
     }
 
+    /// <summary>
+    /// Gets brand sales summaries with pre-computed aggregates for an event day.
+    /// </summary>
+    /// <param name="eventDayId">The ID of the event day.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>
+    /// A list of <see cref="BrandSalesSummary"/> objects grouped by <see cref="Brand"/>, 
+    /// each containing aggregated totals (price, discount, quantity, count) and individual sales.
+    /// Summaries are ordered by Brand descending. Returns an empty list if no sales exist for the event day.
+    /// </returns>
     public async Task<List<BrandSalesSummary>> GetBrandSalesSummariesAsync(int eventDayId, CancellationToken ct = default)
     {
         try

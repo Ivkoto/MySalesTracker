@@ -28,17 +28,12 @@ internal class PaymentRepository(IDbContextFactory<AppDbContext> contextFactory)
 
         if (existingPayment is not null)
         {
-            var updatedPayment = new Payment
-            {
-                PaymentId = existingPayment.PaymentId,
-                EventDayId = eventDayId,
-                Method = method,
-                Amount = amount
-            };
-            
-            context.Entry(existingPayment).CurrentValues.SetValues(updatedPayment);
+            existingPayment.EventDayId = eventDayId;
+            existingPayment.Method = method;
+            existingPayment.Amount = amount;
+
             await context.SaveChangesAsync(ct);
-            return updatedPayment;
+            return existingPayment;
         }
 
         // Insert new payment

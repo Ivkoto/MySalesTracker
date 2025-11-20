@@ -138,7 +138,9 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     /// <param name="eventId">The ID of the event.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// Tuple containing success status, event summary, and error message if failed.
+    /// A <see cref="ServiceResult{EventSummary}"/> representing the operation result. On success
+    /// the result contains the aggregated <see cref="EventSummary"/>; on failure it contains
+    /// an error message explaining the problem.
     /// </returns>
     public async Task<ServiceResult<EventSummary>> GetEventSummaryAsync(int eventId, CancellationToken ct = default)
     {
@@ -227,6 +229,16 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
         }
     }
 
+    /// <summary>
+    /// Updates the starting petty cash amount for a specific <see cref="EventDay"/>.
+    /// </summary>
+    /// <param name="eventDayId">Identifier of the event day to update.</param>
+    /// <param name="amount">New starting petty cash amount; if null, the value is cleared.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// A <see cref="ServiceResult{EventDay}"/> containing the updated <see cref="EventDay"/>
+    /// when successful, otherwise a failure result with an error message.
+    /// </returns>
     public async Task<ServiceResult<EventDay>> UpdateStartingPettyCash(int eventDayId, decimal? amount, CancellationToken ct = default)
     {
         try

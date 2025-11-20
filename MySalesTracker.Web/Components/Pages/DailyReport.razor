@@ -122,25 +122,25 @@ else
             <tbody>
                 @if (summary is not null)
                 {
-                    @if (summary.BrandSalesTotals.ContainsKey(Brand.Totem))
+                    @if (summary.BrandSalesTotals.TryGetValue(Brand.Totem, out var totemTotal))
                     {
                         <tr>
                             <td class="px-3">Общо ТОТЕМ</td>
-                            <td class="px-3 text-end">@summary.BrandSalesTotals[Brand.Totem].ToString("0.00", Bg) лв</td>
+                            <td class="px-3 text-end">@totemTotal.ToString("0.00", Bg) лв</td>
                         </tr>
                     }
-                    @if (summary.BrandSalesTotals.ContainsKey(Brand.Ceramics))
+                    @if (summary.BrandSalesTotals.TryGetValue(Brand.Ceramics, out var ceramicsTotal))
                     {
                         <tr>
                             <td class="px-3">Общо Керамика</td>
-                            <td class="px-3 text-end">@summary.BrandSalesTotals[Brand.Ceramics].ToString("0.00", Bg) лв</td>
+                            <td class="px-3 text-end">@ceramicsTotal.ToString("0.00", Bg) лв</td>
                         </tr>
                     }
-                    @if (summary.BrandSalesTotals.ContainsKey(Brand.Candles))
+                    @if (summary.BrandSalesTotals.TryGetValue(Brand.Candles, out var candlesTotal))
                     {
                         <tr>
                             <td class="px-3">Общо Гора</td>
-                            <td class="px-3 text-end">@summary.BrandSalesTotals[Brand.Candles].ToString("0.00", Bg) лв</td>
+                            <td class="px-3 text-end">@candlesTotal.ToString("0.00", Bg) лв</td>
                         </tr>
                     }
                 }
@@ -289,7 +289,35 @@ else
         errorMessage = null;
         successMessage = null;
         
-        //TODO: Remove try catch here since it's not aligned with the general code style implementation
+        /*TODO: The try-catch block with manual error message construction is inconsistent with the ServiceResult<T> pattern used elsewhere in the codebase.
+        Consider refactoring to call a PaymentService method that returns ServiceResult<T>.*/
+          @*
+            var cash = DecimalParsingHelper.TryParseDecimal(cashText, out var c) ? c : 0m;
+            var card = DecimalParsingHelper.TryParseDecimal(cardText, out var ca) ? ca : 0m;
+            var revolutLidia = DecimalParsingHelper.TryParseDecimal(revolutLidiaText, out var rl) ? rl : 0m;
+            var revolutIvaylo = DecimalParsingHelper.TryParseDecimal(revolutIvayloText, out var ri) ? ri : 0m;
+    
+            var result = await PaymentSvc.SavePaymentsAsync(
+                day.EventDayId,
+                new Dictionary<PaymentMethod, decimal>
+                {
+                    { PaymentMethod.Cash, cash },
+                    { PaymentMethod.Card, card },
+                    { PaymentMethod.RevolutLidia, revolutLidia },
+                    { PaymentMethod.RevolutIvaylo, revolutIvaylo }
+                });
+            if (!result.Success)
+            {
+                errorMessage = result.ErrorMessage;
+            }
+            else
+            {
+                successMessage = result.SuccessMessage;
+                await LoadDataAsync();
+            }
+            isSaving = false;
+          *@
+        
         try
         {
             var cash = DecimalParsingHelper.TryParseDecimal(cashText, out var c) ? c : 0m;
@@ -347,6 +375,7 @@ else
         catch
         {
             // Ignore errors on initial render or if element is not ready
+            // Exception details: ex (suppressed)
         }
     }
 }

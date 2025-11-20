@@ -32,7 +32,7 @@
                 <a href="@($"/event/{b.EventId}/summary")" class="btn btn-outline-success btn-sm">Обща статистика</a>
             </div>
             <div>
-                @* TODO: This OrderBy do not order the event by event day, it is order them by Event ID in the DB call that EF makes. *@
+                @* TODO: This OrderBy does not order the events by event day; it orders them by Event ID in the DB call that EF makes. *@
                 @foreach (var d in b.Days.OrderBy(x => x.Date))
                 {
                     @* <li><a href="@($"/day/{d.EventDayId}")">@d.Date</a></li> *@

@@ -66,7 +66,11 @@ public sealed class PaymentService(
     /// </summary>
     /// <param name="eventDayId">The ID of the event day.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Tuple containing success status, payment summary, and error message if failed.</returns>
+    /// <returns>
+    /// A <see cref="ServiceResult{PaymentSummary}"/> representing the operation result. On success
+    /// the result contains the aggregated <see cref="PaymentSummary"/>; on failure it contains
+    /// an error message describing the problem.
+    /// </returns>
     public async Task<ServiceResult<PaymentSummary>> GetPaymentSummaryAsync(int eventDayId, CancellationToken ct = default)
     {
         try

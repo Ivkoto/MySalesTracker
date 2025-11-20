@@ -216,7 +216,7 @@ else
             return;
         }
 
-        //TODO: is this the right place for the discount variable? Or should it be at the beggining of the code section with the other variables?
+        //TODO: is this the right place for the discount variable? Or should it be at the beginning of the code section with the other variables?
         var discount = 0m;
         if (!string.IsNullOrWhiteSpace(discountText))
         {
@@ -253,8 +253,7 @@ else
         }
         else
         {
-            // Create new sale
-            var newSale = await SaleSvc.CreateSaleAsync(
+            await SaleSvc.CreateSaleAsync(
                 day.EventDayId,
                 productId.Value,
                 unitsPerSale.PriceRuleId,
@@ -300,7 +299,7 @@ else
     }
 
 
-    // TODO: check the ussage otf this one - to many call can cause the pool full issue with the database.
+    // TODO: check the usage of this one - too many calls can cause the pool full issue with the database.
     async Task ReloadSalesAsync()
     {
         var summaries = await SaleSvc.GetBrandSalesSummariesAsync(id);
