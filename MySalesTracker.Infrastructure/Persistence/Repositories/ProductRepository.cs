@@ -1,14 +1,14 @@
-using System.Threading;
 using Microsoft.EntityFrameworkCore;
 using MySalesTracker.Application.Interfaces;
 using MySalesTracker.Domain.Entities;
 
 namespace MySalesTracker.Infrastructure.Persistence.Repositories;
+
 internal class ProductRepository(IDbContextFactory<AppDbContext> contextFactory) : IProductRepository
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory = contextFactory;
 
-    public async Task<List<Product>> GetActiveProducts(CancellationToken ct)
+    public async Task<List<Product>> GetActiveProductsAsync(CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
@@ -18,7 +18,7 @@ internal class ProductRepository(IDbContextFactory<AppDbContext> contextFactory)
                 .ToListAsync(ct);
     }
 
-    public async Task<List<PriceRule>> GetPriceRulesForProduct(int productId, CancellationToken ct)
+    public async Task<List<PriceRule>> GetPriceRulesForProductAsync(int productId, CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 

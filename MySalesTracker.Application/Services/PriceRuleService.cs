@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MySalesTracker.Application.Interfaces;
+using MySalesTracker.Domain.Entities;
 using MySalesTracker.Domain.Models;
 
 namespace MySalesTracker.Application.Services;
@@ -23,7 +24,7 @@ public sealed class PriceRuleService(IPriceRuleRepository priceRuleRepository, I
     {
         try
         {
-            var priceRule = await priceRuleRepository.GetUnitsForProduct(productId, price, onDate, ct);
+            var priceRule = await priceRuleRepository.GetUnitsForProductAsync(productId, price, onDate, ct);
 
             if (priceRule is null)
             {
@@ -39,6 +40,27 @@ public sealed class PriceRuleService(IPriceRuleRepository priceRuleRepository, I
         {
             logger.LogError(ex, "Failed to get units for Product {ProductId}, Price {Price}, Date {Date}", productId, price, onDate);
             throw;
+        }
+    }
+
+
+    /// <summary>
+    /// Retrieves all price rules from the database.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// A list of all <see cref="PriceRule"/> entities. Returns an empty list if an error occurs.
+    /// </returns>
+    public async Task<List<PriceRule>> GetAllPriceRulesAsync(DateOnly onDate, CancellationToken ct = default)
+    {
+        try
+        {
+            return await priceRuleRepository.GetAllPriceRulesAsync(onDate, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get all price rules.");
+            return [];
         }
     }
 }

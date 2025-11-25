@@ -8,7 +8,7 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory = contextFactory;
 
-    public async Task<List<(string Name, DateOnly StartDate, DateOnly EndDate)>> GetExistingEventsByYear(int year, CancellationToken ct)
+    public async Task<List<(string Name, DateOnly StartDate, DateOnly EndDate)>> GetExistingEventsByYearAsync(int year, CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
@@ -20,7 +20,7 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
         return [.. events.Select(e => (e.Name, e.StartDate, e.EndDate))];
     }
 
-    public async Task<Event> CreateEvent(Event evt, CancellationToken ct)
+    public async Task<Event> CreateEventAsync(Event evt, CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
@@ -30,7 +30,7 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
         return evt;
     }
 
-    public async Task<List<Event>> GetAllEvents(CancellationToken ct)
+    public async Task<List<Event>> GetAllEventsAsync(CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
@@ -40,7 +40,7 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
             .ToListAsync(ct);
     }
 
-    public async Task<EventDay?> GetEventDayById(int id, CancellationToken ct)
+    public async Task<EventDay?> GetEventDayByIdAsync(int id, CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
@@ -51,7 +51,7 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
         return evtDay;
     }
 
-    public async Task<Event?> GetEventWithAllData(int eventId, CancellationToken ct)
+    public async Task<Event?> GetEventWithAllDataAsync(int eventId, CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
@@ -66,7 +66,7 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
             .FirstOrDefaultAsync(e => e.EventId == eventId, ct);
     }
 
-    public async Task<EventDay?> UpdateStartingPettyCash(int eventDayId, decimal? amount, CancellationToken ct)
+    public async Task<EventDay?> UpdateStartingPettyCashAsync(int eventDayId, decimal? amount, CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 

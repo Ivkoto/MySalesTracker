@@ -19,12 +19,12 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     /// where either the start date or end date falls within the specified year.
     /// Returns an empty list if no events match the criteria.
     /// </returns>
-    public async Task<List<(string, DateOnly, DateOnly)>> GetExistingEventsByYear(DateOnly year, CancellationToken cancellationToken = default)
+    public async Task<List<(string, DateOnly, DateOnly)>> GetExistingEventsByYearAsync(DateOnly year, CancellationToken cancellationToken = default)
     {
         //TODO: ⬆️ Consider Task<SomeModel> instead of list of tuples for better clarity.
         try
         {
-            return await eventRepository.GetExistingEventsByYear(year.Year, cancellationToken);
+            return await eventRepository.GetExistingEventsByYearAsync(year.Year, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -46,7 +46,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     {
         try
         {
-            return await eventRepository.GetAllEvents(ct);
+            return await eventRepository.GetAllEventsAsync(ct);
         }
         catch (Exception ex)
         {
@@ -73,7 +73,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     {
         try
         {
-            var existingEvents = await GetExistingEventsByYear(startDate, ct);
+            var existingEvents = await GetExistingEventsByYearAsync(startDate, ct);
 
             var validation = EventValidations.ValidateCreateEvent(name, startDate, endDate, existingEvents);
             if (!validation.IsValid)
@@ -91,7 +91,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
                 evt.Days.Add(new EventDay { Date = date });
             }
 
-            var savedEvent = await eventRepository.CreateEvent(evt, ct);
+            var savedEvent = await eventRepository.CreateEventAsync(evt, ct);
 
             logger.LogInformation("Successfully created event {EventId} with {DayCount} days", savedEvent.EventId, savedEvent.Days.Count);
             return ServiceResult<Event>.SuccessResult(savedEvent);
@@ -116,7 +116,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     {
         try
         {
-            var evtDay = await eventRepository.GetEventDayById(eventDayId, ct);
+            var evtDay = await eventRepository.GetEventDayByIdAsync(eventDayId, ct);
 
             if (evtDay is null)
             {
@@ -146,7 +146,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     {
         try
         {
-            var evt = await eventRepository.GetEventWithAllData(eventId, ct);
+            var evt = await eventRepository.GetEventWithAllDataAsync(eventId, ct);
 
             if (evt is null)
             {
@@ -239,11 +239,11 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     /// A <see cref="ServiceResult{EventDay}"/> containing the updated <see cref="EventDay"/>
     /// when successful, otherwise a failure result with an error message.
     /// </returns>
-    public async Task<ServiceResult<EventDay>> UpdateStartingPettyCash(int eventDayId, decimal? amount, CancellationToken ct = default)
+    public async Task<ServiceResult<EventDay>> UpdateStartingPettyCashAsync(int eventDayId, decimal? amount, CancellationToken ct = default)
     {
         try
         {
-            var evtDay = await eventRepository.UpdateStartingPettyCash(eventDayId, amount, ct);
+            var evtDay = await eventRepository.UpdateStartingPettyCashAsync(eventDayId, amount, ct);
 
             if (evtDay is null)
             {

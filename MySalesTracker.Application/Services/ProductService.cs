@@ -18,7 +18,7 @@ public sealed class ProductService(IProductRepository productRepository, ILogger
     {
         try
         {
-            return await productRepository.GetActiveProducts(ct);
+            return await productRepository.GetActiveProductsAsync(ct);
         }
         catch (Exception ex)
         {
@@ -41,7 +41,7 @@ public sealed class ProductService(IProductRepository productRepository, ILogger
     {
         try
         {
-            return await productRepository.GetPriceRulesForProduct(productId, ct);
+            return await productRepository.GetPriceRulesForProductAsync(productId, ct);
         }
         catch (Exception ex)
         {
