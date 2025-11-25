@@ -8,7 +8,7 @@ internal class ProductRepository(IDbContextFactory<AppDbContext> contextFactory)
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory = contextFactory;
 
-    public async Task<List<Product>> GetActiveProducts(CancellationToken ct)
+    public async Task<List<Product>> GetActiveProductsAsync(CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
@@ -18,7 +18,7 @@ internal class ProductRepository(IDbContextFactory<AppDbContext> contextFactory)
                 .ToListAsync(ct);
     }
 
-    public async Task<List<PriceRule>> GetPriceRulesForProduct(int productId, CancellationToken ct)
+    public async Task<List<PriceRule>> GetPriceRulesForProductAsync(int productId, CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 

@@ -147,7 +147,7 @@ else
 
     bool DisableAddButton => !string.IsNullOrEmpty(validationMessage);
 
-
+    
     // "FLE Standard Time" is the Windows time zone ID for Sofia, Bulgaria (UTC+2/UTC+3)
     static readonly TimeZoneInfo SofiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("FLE Standard Time");
 
@@ -160,13 +160,13 @@ else
 
         products = await ProductSvc.GetActiveProductsAsync();
 
-        allPriceRules = await PriceRuleSvc.GetAllPriceRules();
+        allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync(day.Date);
 
         await ReloadSalesAsync();
         await EnsureHubConnectionAsync();
     }
 
-    void OnProductChanged()
+    async Task OnProductChanged()
     {
         if (selectedProduct?.Brand == Brand.Ceramics)
         {
@@ -179,8 +179,11 @@ else
         {
             priceOptions = productId is null
                 ? new()
-                : allPriceRules.Where(r => r.ProductId == productId).OrderBy(r => r.SortOrder).ToList();
+                : await ProductSvc.GetPriceRulesForProductAsync(productId.Value);
 
+
+            // TODO: Hard-coded product names and prices are used for setting default values. This creates a tight coupling 
+            // between the UI and business logic, making the code fragile to product name changes in the database.
             var defaultPrice = (selectedProduct?.Brand, selectedProduct?.Name) switch
             {
                 (Brand.Totem, "Бандани") => 40.00m,
@@ -196,6 +199,7 @@ else
         }
 
         ClearValidationMessage();
+        StateHasChanged();
     }
 
     async Task Add()
@@ -247,7 +251,7 @@ else
             return;
         }
 
-        var unitsPerSale = await PriceRuleSvc.GetUnitsForProduct(productId.Value, price.Value, day.Date);
+        var unitsPerSale = await PriceRuleSvc.GetUnitsForProductAsync(productId.Value, price.Value, day.Date);
 
         var savedScrollPosition = 0.0;
         if (editingSaleId.HasValue)
@@ -288,17 +292,30 @@ else
 
         // Reset quick inputs but keep current product selection
         price = null; priceText = null; discountText = null; note = null; qty = 1;
-        OnProductChanged(); // repopulate priceOptions for the currently selected product
+        await OnProductChanged(); // repopulate priceOptions for the currently selected product
     }
 
     private async Task OnPriceChanged()
     {
-        if (productId is null || day is null || price is null) return;
+        if (productId is null || day is null) return;
 
-        var unitsPerSale = await PriceRuleSvc.GetUnitsForProduct(productId.Value, price.Value, day.Date);
-        qty = unitsPerSale.Units;
+        if (selectedProduct?.Brand == Brand.Ceramics)
+        {
+            // Parse typed price using current culture
+            price = DecimalParsingHelper.TryParseDecimal(priceText, out var parsed)
+                ? parsed
+                : null;
+            qty = 1;
+        }
+        else if (price is not null)
+        {
+            var unitsPerSale = await PriceRuleSvc.GetUnitsForProductAsync(productId.Value, price.Value, day.Date);
+            qty = unitsPerSale.Units;
+        }
 
         ClearValidationMessage();
+
+        StateHasChanged();
     }
 
     void ClearValidationMessage()
@@ -373,7 +390,7 @@ else
         editingSaleId = saleId;
         productId = sale.ProductId;
         
-        OnProductChanged();
+        await OnProductChanged();
 
         price = sale.Price;
         priceText = sale.Price.ToString("0.00", Bg);

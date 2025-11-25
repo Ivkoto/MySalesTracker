@@ -4,6 +4,6 @@ using MySalesTracker.Domain.Models;
 namespace MySalesTracker.Application.Interfaces;
 public interface IPriceRuleRepository
 {
-    Task<PriceRule?> GetUnitsForProduct(int productId, decimal price, DateOnly onDate, CancellationToken ct);
-    Task<List<PriceRule>> GetAllPriceRules(CancellationToken ct);
+    Task<PriceRule?> GetUnitsForProductAsync(int productId, decimal price, DateOnly onDate, CancellationToken ct);
+    Task<List<PriceRule>> GetAllPriceRulesAsync(DateOnly onDate, CancellationToken ct);
 }

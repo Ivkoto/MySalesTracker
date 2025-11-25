@@ -20,11 +20,11 @@ public sealed class PriceRuleService(IPriceRuleRepository priceRuleRepository, I
     /// Returns (1, null) if no matching rule is found, ensuring safe fallback behavior.
     /// The rule is selected based on effective date range and sorted by EffectiveFrom descending, then SortOrder ascending.
     /// </returns>
-    public async Task<UnitsPerSale> GetUnitsForProduct(int productId, decimal price, DateOnly onDate, CancellationToken ct = default)
+    public async Task<UnitsPerSale> GetUnitsForProductAsync(int productId, decimal price, DateOnly onDate, CancellationToken ct = default)
     {
         try
         {
-            var priceRule = await priceRuleRepository.GetUnitsForProduct(productId, price, onDate, ct);
+            var priceRule = await priceRuleRepository.GetUnitsForProductAsync(productId, price, onDate, ct);
 
             if (priceRule is null)
             {
@@ -43,11 +43,19 @@ public sealed class PriceRuleService(IPriceRuleRepository priceRuleRepository, I
         }
     }
 
-    public async Task<List<PriceRule>> GetAllPriceRules(CancellationToken ct = default)
+
+    /// <summary>
+    /// Retrieves all price rules from the database.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// A list of all <see cref="PriceRule"/> entities. Returns an empty list if an error occurs.
+    /// </returns>
+    public async Task<List<PriceRule>> GetAllPriceRulesAsync(DateOnly onDate, CancellationToken ct = default)
     {
         try
         {
-            return await priceRuleRepository.GetAllPriceRules(ct);
+            return await priceRuleRepository.GetAllPriceRulesAsync(onDate, ct);
         }
         catch (Exception ex)
         {

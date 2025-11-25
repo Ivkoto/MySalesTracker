@@ -107,7 +107,7 @@ else
         </table>
 
         <div class="mt-3">
-            <button class="btn btn-primary" @onclick="SavePayments" disabled="@(isSaving || summary is null)">
+            <button class="btn btn-primary" @onclick="SavePayments" disabled="@DisableSaveButton">
                 @(isSaving ? "Записване..." : "Запази")
             </button>
         </div>
@@ -177,6 +177,7 @@ else
     string? errorMessage;
     string? validationMessage;
     bool isSaving;
+    bool DisableSaveButton => isSaving || summary is null;
 
     ElementReference cashInput;
     ElementReference cardInput;
@@ -355,7 +356,7 @@ else
             return;
         }
         
-        var result = await EventSvc.UpdateStartingPettyCash(day.EventDayId, amount);
+        var result = await EventSvc.UpdateStartingPettyCashAsync(day.EventDayId, amount);
         
         if(!result.Success)
         {
