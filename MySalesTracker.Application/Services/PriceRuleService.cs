@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MySalesTracker.Application.Interfaces;
+using MySalesTracker.Domain.Entities;
 using MySalesTracker.Domain.Models;
 
 namespace MySalesTracker.Application.Services;
@@ -19,7 +20,7 @@ public sealed class PriceRuleService(IPriceRuleRepository priceRuleRepository, I
     /// Returns (1, null) if no matching rule is found, ensuring safe fallback behavior.
     /// The rule is selected based on effective date range and sorted by EffectiveFrom descending, then SortOrder ascending.
     /// </returns>
-    public async Task<UnitsPerSale> GetUnitsForProductAsync(int productId, decimal price, DateOnly onDate, CancellationToken ct = default)
+    public async Task<UnitsPerSale> GetUnitsForProduct(int productId, decimal price, DateOnly onDate, CancellationToken ct = default)
     {
         try
         {
@@ -39,6 +40,19 @@ public sealed class PriceRuleService(IPriceRuleRepository priceRuleRepository, I
         {
             logger.LogError(ex, "Failed to get units for Product {ProductId}, Price {Price}, Date {Date}", productId, price, onDate);
             throw;
+        }
+    }
+
+    public async Task<List<PriceRule>> GetAllPriceRules(CancellationToken ct = default)
+    {
+        try
+        {
+            return await priceRuleRepository.GetAllPriceRules(ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get all price rules.");
+            return [];
         }
     }
 }

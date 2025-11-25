@@ -7,6 +7,13 @@ internal class PriceRuleRepository(IDbContextFactory<AppDbContext> contextFactor
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory = contextFactory;
 
+    public async Task<List<PriceRule>> GetAllPriceRules(CancellationToken ct)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(ct);
+
+        return await context.PriceRules.ToListAsync(ct);
+    }
+
     public async Task<PriceRule?> GetUnitsForProduct(int productId, decimal price, DateOnly onDate, CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);

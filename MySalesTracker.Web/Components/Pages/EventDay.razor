@@ -15,13 +15,12 @@
 }
 else
 {
-    <h2>@day.Date.ToDateTime(TimeOnly.MinValue).ToString("dd.MM dddd", Bg)</h2>
-
-    <p><a href="/events">⬅️ Събития</a> | @day.Event.Name</p>
-
-    <div class="mb-3">
+    <div class="mb-3 d-flex justify-content-start align-items-center gap-3">
+        <h2 class="mb-0">@day.Date.ToDateTime(TimeOnly.MinValue).ToString("dd.MM dddd", Bg)</h2>
         <a href="/day/@id/report" class="btn btn-outline-primary">Дневен Отчет</a>
     </div>
+
+    <p><a href="/events">⬅️ Събития</a> | @day.Event.Name</p>    
 
     <div class="mb-2 d-flex gap-3 flex-wrap align-items-center">
         <select @bind="productId" @bind:after="OnProductChanged" class="form-select" style="width: 16.5rem">
@@ -56,9 +55,9 @@ else
                @bind="discountText" @bind:event="oninput" @bind:after="ClearValidationMessage" />
 
         <!-- Note input -->
-        <input type="text" inputmode="text" enterkeyhint="done" autocomplete="off"
+        @* <input type="text" inputmode="text" enterkeyhint="done" autocomplete="off"
                placeholder="Бележка…" class="form-control" style="width: 8rem"
-               @bind="note" @bind:event="oninput" />
+               @bind="note" @bind:event="oninput" /> *@
 
         <button class="btn btn-primary" style="width: 8rem; height: 2.75rem" @onclick="Add" disabled="@DisableAddButton">
             @(editingSaleId.HasValue ? "Запази" : "Добави")
@@ -79,7 +78,7 @@ else
     @foreach (var summary in brandSummaries)
     {
       <h4 class="mt-4">@summary.Brand.GetDisplayName()</h4>
-      <table class="table table-striped align-middle compact-table">
+      <table class="table table-striped align-middle compact-table" style="margin-left: -1.5rem; margin-right: -1.5rem;">
           <thead class="table-warning">
               <tr>
                   <th class="px-3">Час</th>
@@ -87,7 +86,7 @@ else
                   <th class="px-3">бр.</th>
                   <th class="px-3">Цена</th>
                   <th class="px-3">Отст.</th>
-                  <th class="px-3">Бележка</th>
+                  @* <th class="px-3">Бележка</th> *@
                   <th class="px-3">Действия</th>
               </tr>
           </thead>
@@ -99,8 +98,8 @@ else
                       <td class="px-3">@s.Product.Name</td>
                       <td class="px-3">@s.QuantityUnits</td>
                       <td class="px-3">@s.Price.ToString("0.00")</td>
-                      <td class="px-3">@s.DiscountValue.ToString("0.00")</td>
-                      <td class="px-3">@s.Notes</td>
+                      <td class="px-3" style="color: @(s.DiscountValue > 0 ? "inherit" : "lightgray")">@s.DiscountValue.ToString("0.00")</td>
+                      @* <td class="px-3">@s.Notes</td> *@
                       <td class="px-3 text-end">
                           <div class="btn-group" role="group">
                               <button class="btn btn-outline-primary btn-sm" @onclick="() => EditSale(s.SaleId)">Edit</button>
@@ -127,6 +126,7 @@ else
     Domain.Entities.EventDay? day;
     List<Product> products = new();
     List<PriceRule> priceOptions = new();
+    List<PriceRule> allPriceRules = new();
     List<BrandSalesSummary> brandSummaries = new();
     HubConnection? hubConnection;
 
@@ -141,12 +141,13 @@ else
     int qty = 1;
     string? validationMessage;
     int? editingSaleId;   // Track if editing a sale
+    double scrollPositionBeforeEdit = 0;
 
     static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
 
     bool DisableAddButton => !string.IsNullOrEmpty(validationMessage);
 
-    
+
     // "FLE Standard Time" is the Windows time zone ID for Sofia, Bulgaria (UTC+2/UTC+3)
     static readonly TimeZoneInfo SofiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("FLE Standard Time");
 
@@ -155,41 +156,52 @@ else
     protected override async Task OnInitializedAsync()
     {
         day = await EventSvc.GetEventDayByIdAsync(id);
-        if (day == null)
-        {
-            // EventDay not found - the loading message will remain visible            
-            return;
-        }
+        if (day == null) return;
 
         products = await ProductSvc.GetActiveProductsAsync();
+
+        allPriceRules = await PriceRuleSvc.GetAllPriceRules();
 
         await ReloadSalesAsync();
         await EnsureHubConnectionAsync();
     }
 
-    async Task OnProductChanged()
+    void OnProductChanged()
     {
         if (selectedProduct?.Brand == Brand.Ceramics)
         {
             priceOptions.Clear();
-            price = null; priceText = null; // force manual entry
-            qty = 1;                        // no rules => default 1
+            price = null;
+            priceText = null;
+            qty = 1; // no rules => default 1
         }
         else
         {
             priceOptions = productId is null
                 ? new()
-                : await ProductSvc.GetPriceRulesForProductAsync(productId.Value);
-            price = null; priceText = null; qty = 1;
+                : allPriceRules.Where(r => r.ProductId == productId).OrderBy(r => r.SortOrder).ToList();
+
+            var defaultPrice = (selectedProduct?.Brand, selectedProduct?.Name) switch
+            {
+                (Brand.Totem, "Бандани") => 40.00m,
+                (Brand.Totem, "Ръкавици") => 35.00m,
+                (Brand.Candles, _) => 19.00m,
+                _ => 0m
+            };
+
+            price = priceOptions.FirstOrDefault(r => r.Price == defaultPrice)?.Price 
+                    ?? priceOptions.FirstOrDefault()?.Price;
+            priceText = null; 
+            qty = 1;
         }
 
         ClearValidationMessage();
-        StateHasChanged();
     }
 
     async Task Add()
     {
         if (day is null) return;
+
         if (productId is null)
         {
             validationMessage = "Посочи какво продаваш, на врачка ли ще ходиш после?";
@@ -235,8 +247,9 @@ else
             return;
         }
 
-        var unitsPerSale = await PriceRuleSvc.GetUnitsForProductAsync(productId.Value, price.Value, day.Date);
+        var unitsPerSale = await PriceRuleSvc.GetUnitsForProduct(productId.Value, price.Value, day.Date);
 
+        var savedScrollPosition = 0.0;
         if (editingSaleId.HasValue)
         {
             // Update existing sale
@@ -249,6 +262,8 @@ else
                 note,
                 unitsPerSale.PriceRuleId);
 
+            savedScrollPosition = scrollPositionBeforeEdit;
+            scrollPositionBeforeEdit = 0;
             editingSaleId = null;
         }
         else
@@ -265,32 +280,25 @@ else
 
         await ReloadSalesAsync();
 
+        if (savedScrollPosition > 0)
+        {
+            await Task.Delay(100); // Small delay to let UI update
+            await JSRuntime.InvokeVoidAsync("window.scrollTo", new { top = savedScrollPosition, behavior = "smooth" });
+        }
+
         // Reset quick inputs but keep current product selection
         price = null; priceText = null; discountText = null; note = null; qty = 1;
-        await OnProductChanged(); // repopulate priceOptions for the currently selected product
+        OnProductChanged(); // repopulate priceOptions for the currently selected product
     }
 
     private async Task OnPriceChanged()
     {
-        if (productId is null || day is null) return;
+        if (productId is null || day is null || price is null) return;
 
-        if (selectedProduct?.Brand == Brand.Ceramics)
-        {
-            // Parse typed price using current culture
-            price = DecimalParsingHelper.TryParseDecimal(priceText, out var parsed)
-                ? parsed
-                : null;
-            qty = 1;
-        }
-        else if (price is not null)
-        {
-            var unitsPerSale = await PriceRuleSvc.GetUnitsForProductAsync(productId.Value, price.Value, day.Date);
-            qty = unitsPerSale.Units;
-        }
+        var unitsPerSale = await PriceRuleSvc.GetUnitsForProduct(productId.Value, price.Value, day.Date);
+        qty = unitsPerSale.Units;
 
         ClearValidationMessage();
-
-        StateHasChanged();
     }
 
     void ClearValidationMessage()
@@ -360,18 +368,22 @@ else
         var sale = await SaleSvc.GetSaleByIdAsync(saleId);
         if (sale is null) return;
 
+        scrollPositionBeforeEdit = await JSRuntime.InvokeAsync<double>("eval", "window.scrollY");
+
         editingSaleId = saleId;
         productId = sale.ProductId;
         
-        await OnProductChanged();
+        OnProductChanged();
 
         price = sale.Price;
         priceText = sale.Price.ToString("0.00", Bg);
         discountText = sale.DiscountValue > 0 ? sale.DiscountValue.ToString("0.00", Bg) : null;
         note = sale.Notes;
 
-
         StateHasChanged();
+
+        // Scroll to top smoothly
+        await JSRuntime.InvokeVoidAsync("window.scrollTo", new { top = 0, behavior = "smooth" });
     }
 
     private async Task DeleteSale(int saleId)

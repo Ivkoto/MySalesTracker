@@ -1,9 +1,9 @@
-using System.Threading;
 using Microsoft.EntityFrameworkCore;
 using MySalesTracker.Application.Interfaces;
 using MySalesTracker.Domain.Entities;
 
 namespace MySalesTracker.Infrastructure.Persistence.Repositories;
+
 internal class ProductRepository(IDbContextFactory<AppDbContext> contextFactory) : IProductRepository
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory = contextFactory;
