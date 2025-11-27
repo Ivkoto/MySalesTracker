@@ -37,8 +37,8 @@
                 {
                     @* <li><a href="@($"/day/{d.EventDayId}")">@d.Date</a></li> *@
                     <a href="@($"/day/{d.EventDayId}")"
-                       class="d-inline-block p-2 m-1 border rounded text-decoration-none"
-                       style="width: 4rem; text-align: center; @(d.Date == today ? "background-color: lightgreen;" : "")">
+                       class="d-inline-block p-2 m-1 border rounded text-decoration-none @(d.Date == today ? "current-day-highlight" : "")"
+                       style="width: 4rem; text-align: center;">
                         <strong>@GetFormattedDate(d.Date)</strong>
                     </a>
                 }
