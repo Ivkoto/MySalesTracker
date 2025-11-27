@@ -32,11 +32,12 @@
                 <a href="@($"/event/{b.EventId}/summary")" class="btn btn-outline-success btn-sm">Обща статистика</a>
             </div>
             <div>
-                @* TODO: This OrderBy does not order the events by event day; it orders them by Event ID in the DB call that EF makes. *@
+                @* TODO: This OrderBy does not order the events by event date; it orders them by Event ID in the DB call that EF makes. *@
                 @foreach (var d in b.Days.OrderBy(x => x.Date))
                 {
                     @* <li><a href="@($"/day/{d.EventDayId}")">@d.Date</a></li> *@
-                    <a href="@($"/day/{d.EventDayId}")" class="d-inline-block p-2 m-1 border rounded text-decoration-none" style="width: 4rem; text-align: center;">
+                    <a href="@($"/day/{d.EventDayId}")"
+                       class="d-inline-block p-2 m-1 border rounded text-decoration-none event-day-item @(d.Date == today ? "current-day-highlight" : "")">
                         <strong>@GetFormattedDate(d.Date)</strong>
                     </a>
                 }
@@ -51,6 +52,7 @@
     DateOnly end = DateOnly.FromDateTime(DateTime.Today);
     List<Domain.Entities.Event> events = new();
     string? errorMessage;
+    DateOnly today = DateOnly.FromDateTime(DateTime.Today);
 
     protected override async Task OnInitializedAsync()
         => events = await EventSvc.GetAllEventsAsync();
