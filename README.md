@@ -118,7 +118,7 @@ _NuGet packages. Add, register their services in Program.cs, include their CSS/J
 
 #### For full enterprise-grade components (export to Excel, virtualization, charts):
 
-**Payed libraries:**
+**Paid libraries:**
 - [Telerik UI for Blazor](https://www.telerik.com/blazor-ui)
 - [Syncfusion Blazor](https://www.syncfusion.com/blazor-components)
 - [DevExpress Blazor](https://www.devexpress.com/blazor/)
