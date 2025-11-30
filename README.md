@@ -53,7 +53,7 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
   - `Свещи/Гора` and `Тотем`: select price from rules; the selected price is the total for the units
 - Discount input per sale (amount) with inline validation
 - Grouped view by brand with daily totals
-- Daily sales report by brands and available payments by payment method.
+- Daily sales summary by brands and available payments by payment method.
 - Sales statistics by brands and payments available for the entire event.
 - Weather page (optional utility)
   - City search, 1 to 10 days forecast
@@ -118,11 +118,13 @@ _NuGet packages. Add, register their services in Program.cs, include their CSS/J
 
 #### For full enterprise-grade components (export to Excel, virtualization, charts):
 
-- **Telerik UI for Blazor**
-- **Syncfusion Blazor**
-- **DevExpress Blazor**\
-  Paid but come with support and all components.
+**Paid libraries:**
+- [Telerik UI for Blazor](https://www.telerik.com/blazor-ui)
+- [Syncfusion Blazor](https://www.syncfusion.com/blazor-components)
+- [DevExpress Blazor](https://www.devexpress.com/blazor/)
 
+**Free libraries:**
+- [Mud Blazor](https://mudblazor.com/getting-started/installation#online-playground)
 ---
 
 Maintained for internal use. Contributions or suggestions are welcome.

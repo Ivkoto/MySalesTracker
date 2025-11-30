@@ -21,5 +21,5 @@ public sealed class EventDay
 
     public ICollection<Sale> Sales { get; init; } = [];
     public ICollection<Expense> Expenses { get; init; } = [];
-    public ICollection<Payment> PaymentsCounted { get; init; } = [];
+    public ICollection<Payment> Payments { get; init; } = [];
 }

@@ -156,16 +156,20 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
 
             // Aggregate all sales across all event days
             var allSales = evt.Days.SelectMany(d => d.Sales).ToList();
-            var allPayments = evt.Days.SelectMany(d => d.PaymentsCounted).ToList();
+            var allPayments = evt.Days.SelectMany(d => d.Payments).ToList();
 
             // Calculate counts by brand (only TOTEM and Candles)
-            var totemCount = allSales
-                .Where(s => s.Product.Brand == Brand.Totem)
-                .Sum(s => s.QuantityUnits);
+            var totemSales = allSales.Where(s => s.Product.Brand == Brand.Totem).ToList();
+            var totemCount = totemSales.Sum(s => s.QuantityUnits);
+            var totemProductsCount = totemSales
+                .GroupBy(s => s.Product.Name)
+                .ToDictionary(g => g.Key, g => g.Sum(s => s.QuantityUnits));
 
-            var candlesCount = allSales
-                .Where(s => s.Product.Brand == Brand.Candles)
-                .Sum(s => s.QuantityUnits);
+            var goraSales = allSales.Where( s => s.Product.Brand == Brand.Candles).ToList();
+            var goraCount = goraSales.Sum(s => s.QuantityUnits);
+            var goraProductsCount = goraSales
+                .GroupBy(s => s.Product.Name)
+                .ToDictionary(g => g.Key, g => g.Sum(s => s.QuantityUnits));
 
             // Calculate revenue by brand (price - discount)
             var totemRevenue = allSales
@@ -176,11 +180,11 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
                 .Where(s => s.Product.Brand == Brand.Ceramics)
                 .Sum(s => s.Price - s.DiscountValue);
 
-            var candlesRevenue = allSales
+            var goraRevenue = allSales
                 .Where(s => s.Product.Brand == Brand.Candles)
                 .Sum(s => s.Price - s.DiscountValue);
 
-            var totalRevenue = totemRevenue + ceramicsRevenue + candlesRevenue;
+            var totalRevenue = totemRevenue + ceramicsRevenue + goraRevenue;
 
             // Calculate payment totals by method
             var cashTotal = allPayments
@@ -209,10 +213,12 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
                 StartDate = evt.StartDate,
                 EndDate = evt.EndDate,
                 TotemCount = totemCount,
-                CandlesCount = candlesCount,
+                TotemProductsCount = totemProductsCount,
                 TotemRevenue = totemRevenue,
+                GoraCount = goraCount,
+                GoraProductsCount = goraProductsCount,
+                GoraRevenue = goraRevenue,
                 CeramicsRevenue = ceramicsRevenue,
-                CandlesRevenue = candlesRevenue,
                 TotalRevenue = totalRevenue,
                 CashTotal = cashTotal,
                 CardTotal = cardTotal,

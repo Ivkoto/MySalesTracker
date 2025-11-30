@@ -14,6 +14,7 @@ internal class PaymentRepository(IDbContextFactory<AppDbContext> contextFactory)
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
         return await context.Payments
+            .AsNoTracking()
             .Where(p => p.EventDayId == eventDayId)
             .OrderBy(p => p.Method)
             .ToListAsync(ct);
