@@ -28,12 +28,24 @@ public sealed class EventSummary
     public int TotemCount { get; init; }
 
     /// <summary>
-    /// Total quantity of Candles (ГОРА) products sold across all event days.
+    /// Quantity of TOTEM products sold across all event days separate by product.
     /// </summary>
-    public int CandlesCount { get; init; }
+    public Dictionary<string, int> TotemProductsCount { get; init; } = [];
 
-    // Revenue by brand (net revenue after discounts)
-    
+    /// <summary>
+    /// Total quantity of ГОРА products sold across all event days.
+    /// </summary>
+    public int GoraCount { get; init; }
+
+    /// <summary>
+    /// Quantity of GORA products sold across all event days separate by product.
+    /// </summary>
+    public Dictionary<string, int> GoraProductsCount { get; init; } = [];
+
+
+
+    // Revenues by brand (net revenue after discounts)
+
     /// <summary>
     /// Total TOTEM revenue (price - discount) across all event days.
     /// </summary>
@@ -47,12 +59,13 @@ public sealed class EventSummary
     /// <summary>
     /// Total Candles revenue (price - discount) across all event days.
     /// </summary>
-    public decimal CandlesRevenue { get; init; }
+    public decimal GoraRevenue { get; init; }
 
     /// <summary>
     /// Grand total revenue across all brands (price - discount) for all event days.
     /// </summary>
     public decimal TotalRevenue { get; init; }
+
 
     // Payments by method
     

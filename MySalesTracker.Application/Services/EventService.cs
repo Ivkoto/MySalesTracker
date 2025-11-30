@@ -156,16 +156,26 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
 
             // Aggregate all sales across all event days
             var allSales = evt.Days.SelectMany(d => d.Sales).ToList();
-            var allPayments = evt.Days.SelectMany(d => d.PaymentsCounted).ToList();
+            var allPayments = evt.Days.SelectMany(d => d.Payments).ToList();
 
             // Calculate counts by brand (only TOTEM and Candles)
             var totemCount = allSales
                 .Where(s => s.Product.Brand == Brand.Totem)
                 .Sum(s => s.QuantityUnits);
 
-            var candlesCount = allSales
+            var totemProductsCount = allSales
+                .Where(s => s.Product.Brand == Brand.Totem)
+                .GroupBy(s => s.Product.Name)
+                .ToDictionary(g => g.Key, g => g.Sum(s => s.QuantityUnits));
+
+            var goraCount = allSales
                 .Where(s => s.Product.Brand == Brand.Candles)
                 .Sum(s => s.QuantityUnits);
+
+            var goraProductsCount = allSales
+                .Where(s => s.Product.Brand == Brand.Candles)
+                .GroupBy(s => s.Product.Name)
+                .ToDictionary(g => g.Key, g => g.Sum(s => s.QuantityUnits));
 
             // Calculate revenue by brand (price - discount)
             var totemRevenue = allSales
@@ -209,10 +219,12 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
                 StartDate = evt.StartDate,
                 EndDate = evt.EndDate,
                 TotemCount = totemCount,
-                CandlesCount = candlesCount,
+                TotemProductsCount = totemProductsCount,
                 TotemRevenue = totemRevenue,
+                GoraCount = goraCount,
+                GoraProductsCount = goraProductsCount,
+                GoraRevenue = candlesRevenue,
                 CeramicsRevenue = ceramicsRevenue,
-                CandlesRevenue = candlesRevenue,
                 TotalRevenue = totalRevenue,
                 CashTotal = cashTotal,
                 CardTotal = cardTotal,

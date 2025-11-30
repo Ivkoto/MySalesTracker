@@ -56,12 +56,13 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
         return await context.Events
+            .AsNoTracking()
             .Include(e => e.Days)
                 .ThenInclude(d => d.Sales)
                     .ThenInclude(s => s.Product)
             .Include(e => e.Days)
-                .ThenInclude(d => d.PaymentsCounted)
-            //TODO: Test and add if needed
+                .ThenInclude(d => d.Payments)
+            //TODO: Test for N+1 and add if needed
             //.AsSplitQuery()
             .FirstOrDefaultAsync(e => e.EventId == eventId, ct);
     }

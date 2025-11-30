@@ -33,10 +33,24 @@ else if (summary is not null)
                     <td class="px-3">Брой Тотем</td>
                     <td class="px-3 text-end fw-bold">@summary.TotemCount</td>
                 </tr>
+                @foreach(var product in summary.TotemProductsCount)
+                {
+                    <tr class="table-secondary">
+                        <td class="px-3 ps-5" style="font-size: 0.9em;">↳ @product.Key</td>
+                        <td class="px-3 text-end" style="font-size: 0.9em;">@product.Value</td>
+                    </tr>
+                }
                 <tr>
                     <td class="px-3">Брой Гора</td>
-                    <td class="px-3 text-end fw-bold">@summary.CandlesCount</td>
+                    <td class="px-3 text-end fw-bold">@summary.GoraCount</td>
                 </tr>
+                @foreach (var product in summary.GoraProductsCount)
+                {
+                    <tr class="table-secondary">
+                        <td class="px-3 ps-5" style="font-size: 0.9em;">↳ @product.Key</td>
+                        <td class="px-3 text-end" style="font-size: 0.9em;">@product.Value</td>
+                    </tr>
+                }
                 <tr>
                     <td class="px-3">Оборот Тотем</td>
                     <td class="px-3 text-end">@summary.TotemRevenue.ToString("0.00", Bg) лв</td>
@@ -47,8 +61,8 @@ else if (summary is not null)
                 </tr>
                 <tr>
                     <td class="px-3">Оборот Гора</td>
-                    <td class="px-3 text-end">@summary.CandlesRevenue.ToString("0.00", Bg) лв</td>
-                </tr>
+                    <td class="px-3 text-end">@summary.GoraRevenue.ToString("0.00", Bg) лв</td>
+                </tr>                
                 <tr class="table-light">
                     <td class="px-3 fw-bold">Оборот Общо</td>
                     <td class="px-3 fw-bold text-end">@summary.TotalRevenue.ToString("0.00", Bg) лв</td>
