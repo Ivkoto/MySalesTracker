@@ -35,7 +35,7 @@ else
         }
         else
         {
-            <div class="form-control" style="width: 16.5rem">@selectedProduct?.Name</div>
+            <div class="form-control" style="width: 16.5rem">@selectedProduct!.Name</div>
         }
 
         @if (selectedProduct?.Brand == Brand.Ceramics)
