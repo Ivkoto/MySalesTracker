@@ -1,11 +1,9 @@
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using MySalesTracker.Application.Extensions;
-using MySalesTracker.Infrastructure.Persistence;
 using MySalesTracker.Infrastructure.Extensions;
 using MySalesTracker.Web.Components;
 using MySalesTracker.Web.State;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,10 +21,11 @@ builder.Services
     .AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddServerSideBlazor(options => {
-  options.DetailedErrors = builder.Environment.IsDevelopment();
-  options.DisconnectedCircuitMaxRetained = 5;
-  options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(3);
+builder.Services.AddServerSideBlazor(options =>
+{
+    options.DetailedErrors = builder.Environment.IsDevelopment();
+    options.DisconnectedCircuitMaxRetained = 5;
+    options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(3);
 });
 
 builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
@@ -53,13 +52,7 @@ builder.Services.AddCascadingAuthenticationState();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
-    await using var context = await dbFactory.CreateDbContextAsync();
-    context.Database.Migrate();
-    await DataSeeder.RunAsync(context);
-}
+await DatabaseInitializer.InitializeDatabaseAsync(app.Services);
 
 if (!app.Environment.IsDevelopment())
 {
