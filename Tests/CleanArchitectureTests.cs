@@ -3,16 +3,16 @@ using ArchUnitNET.Loader;
 using ArchUnitNET.xUnit;
 using static ArchUnitNET.Fluent.ArchRuleDefinition;
 
-namespace ArchitectureTests;
+namespace MySalesTracker.Tests;
 
 public class CleanArchitectureTests
 {
     private static readonly Architecture Architecture = new ArchLoader()
         .LoadAssemblies(
-            typeof(MySalesTracker.Domain.Entities.Event).Assembly,
-            typeof(MySalesTracker.Application.Services.EventService).Assembly,
-            typeof(MySalesTracker.Infrastructure.Persistence.AppDbContext).Assembly,
-            typeof(MySalesTracker.Web.Components.App).Assembly)
+            typeof(Domain.Entities.Event).Assembly,
+            typeof(Application.Services.EventService).Assembly,
+            typeof(Infrastructure.Persistence.AppDbContext).Assembly,
+            typeof(Web.Components.App).Assembly)
         .Build();
 
     private static readonly IObjectProvider<IType> DomainLayer =
