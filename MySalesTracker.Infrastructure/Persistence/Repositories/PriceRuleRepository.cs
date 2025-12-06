@@ -11,9 +11,11 @@ internal class PriceRuleRepository(IDbContextFactory<AppDbContext> contextFactor
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
-        return await context.PriceRules
+        var result =  await context.PriceRules
             .Where (r => r.EffectiveFrom <= onDate && (r.EffectiveTo == null || r.EffectiveTo >= onDate))
             .ToListAsync(ct);
+
+        return result;
     }
 
     public async Task<PriceRule?> GetUnitsForProductAsync(int productId, decimal price, DateOnly onDate, CancellationToken ct)

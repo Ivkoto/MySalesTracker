@@ -26,27 +26,4 @@ public sealed class ProductService(IProductRepository productRepository, ILogger
             throw;
         }
     }
-
-    /// <summary>
-    /// Gets price rules for a specific product.
-    /// </summary>
-    /// <param name="productId">The ID of the product.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>
-    /// A list of <see cref="PriceRule"/> objects associated with the specified product,
-    /// ordered by <see cref="PriceRule.SortOrder"/> ascending for display consistency.
-    /// Returns an empty list if the product has no price rules.
-    /// </returns>
-    public async Task<List<PriceRule>> GetPriceRulesForProductAsync(int productId, CancellationToken ct = default)
-    {
-        try
-        {
-            return await productRepository.GetPriceRulesForProductAsync(productId, ct);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to retrieve price rules for Product {ProductId}", productId);
-            throw;
-        }
-    }
 }
