@@ -27,10 +27,11 @@ public static class DataSeeder
 
         var effectiveFrom = new DateOnly(2020, 1, 1);
 
-        // Candles (Gora brand): 19→1, 29→1, 38→2, 57→3
+        // Candles (Gora brand): 19→1, 29→1, 38→2, 57→3, 60→2, 90→3
         context.PriceRules.AddRange(
-            PR(pCandle, 19.00m, 1, 1), PR(pCandle, 29.00m, 1, 2),
-            PR(pCandle, 38.00m, 2, 3), PR(pCandle, 57.00m, 3, 4)
+            PR(pCandle, 19.00m, 1, 1), PR(pCandle, 30.00m, 1, 2),
+            PR(pCandle, 38.00m, 2, 3), PR(pCandle, 57.00m, 3, 4),
+            PR(pCandle, 60.00m, 2, 5), PR(pCandle, 90.00m, 3, 6)
         );
 
         // Bags (Gora brand): 2.00→1, 4.00→2, 6.00→3, 8.00→4
@@ -39,10 +40,10 @@ public static class DataSeeder
             PR(pBags, 6.00m, 3, 3), PR(pBags, 8.00m, 4, 4)
         );
 
-        // Matches (Gora brand): 7→1, 14→2, 21→3, 28→4
+        // Matches (Gora brand): 6→1, 12→2, 18→3, 24→4
         context.PriceRules.AddRange(
-            PR(pMatches, 7.00m, 1, 1), PR(pMatches, 14.00m, 2, 2),
-            PR(pMatches, 21.00m, 3, 3), PR(pMatches, 28.00m, 4, 4)
+            PR(pMatches, 6.00m, 1, 1), PR(pMatches, 12.00m, 2, 2),
+            PR(pMatches, 18.00m, 3, 3), PR(pMatches, 24.00m, 4, 4)
         );
 
         // Gloves (Totem brand): 30/35/40→1, 70/80→2, 105/120→3

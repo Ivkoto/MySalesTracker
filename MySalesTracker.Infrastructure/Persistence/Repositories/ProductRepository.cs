@@ -17,14 +17,4 @@ internal class ProductRepository(IDbContextFactory<AppDbContext> contextFactory)
                 .OrderByDescending(p => p.Brand)
                 .ToListAsync(ct);
     }
-
-    public async Task<List<PriceRule>> GetPriceRulesForProductAsync(int productId, CancellationToken ct)
-    {
-        await using var context = await _contextFactory.CreateDbContextAsync(ct);
-
-        return await context.PriceRules
-                .Where(r => r.ProductId == productId)
-                .OrderBy(r => r.SortOrder)
-                .ToListAsync(ct);
-    }
 }
