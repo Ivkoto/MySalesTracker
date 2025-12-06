@@ -40,7 +40,7 @@ public static class DataSeeder
             PR(pBags, 6.00m, 3, 3), PR(pBags, 8.00m, 4, 4)
         );
 
-        // Matches (Gora brand): 7→1, 14→2, 21→3, 28→4
+        // Matches (Gora brand): 6→1, 12→2, 18→3, 24→4
         context.PriceRules.AddRange(
             PR(pMatches, 6.00m, 1, 1), PR(pMatches, 12.00m, 2, 2),
             PR(pMatches, 18.00m, 3, 3), PR(pMatches, 24.00m, 4, 4)

@@ -22,7 +22,7 @@ internal class PriceRuleRepository(IDbContextFactory<AppDbContext> contextFactor
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
-        var priceRule = await context.PriceRules
+        return await context.PriceRules
                 .Where(r => r.ProductId == productId
                     && r.Price == price
                     && r.EffectiveFrom <= onDate
@@ -30,7 +30,5 @@ internal class PriceRuleRepository(IDbContextFactory<AppDbContext> contextFactor
                 .OrderByDescending(r => r.EffectiveFrom)
                 .ThenBy(r => r.SortOrder)
                 .FirstOrDefaultAsync(ct);
-
-        return priceRule;
     }
 }

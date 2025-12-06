@@ -186,7 +186,7 @@ else
         {
             priceOptions = productId is null
                 ? new()
-                : allPriceRules.Where(r => r.ProductId == productId).OrderBy(r => r.SortOrder).ToList<PriceRule>();
+                : allPriceRules.Where(r => r.ProductId == productId).OrderBy(r => r.SortOrder).ToList();
 
             // TODO: Hard-coded product names and prices are used for setting default values. This creates a tight coupling 
             // between the UI and business logic, making the code fragile to product name changes in the database.
