@@ -5,8 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 	<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-  <!-- Added for trying to run Out Of process instead of 'inprocess'. I have the same in web.config set! -->
-  <AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>
+  <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
   </PropertyGroup>
 
  <ItemGroup>
@@ -15,6 +14,7 @@
 
  <ItemGroup>
    <ProjectReference Include="..\MySalesTracker.Application\MySalesTracker.Application.csproj" />
+   <ProjectReference Include="..\MySalesTracker.AspireServiceDefaults\MySalesTracker.AspireServiceDefaults.csproj" />
    <ProjectReference Include="..\MySalesTracker.Infrastructure\MySalesTracker.Infrastructure.csproj" />
  </ItemGroup>
 

@@ -5,6 +5,7 @@ namespace MySalesTracker.Application.Interfaces;
 /// </summary>
 public interface INotificationService
 {
+
     /// <summary>
     /// Notifies clients that a new sale has been created.
     /// </summary>
@@ -12,4 +13,5 @@ public interface INotificationService
     /// <param name="saleId">The ID of the newly created sale.</param>
     /// <param name="ct">Cancellation token.</param>
     Task NotifySaleCreatedAsync(int eventDayId, int saleId, CancellationToken ct = default);
+    Task NotifyEventCreatedAsync(int eventId, CancellationToken ct = default);
 }

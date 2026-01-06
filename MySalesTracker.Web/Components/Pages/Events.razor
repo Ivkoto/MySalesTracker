@@ -6,15 +6,26 @@
 <h2>Събития</h2>
 
 <div class="mb-3 d-flex gap-3 flex-wrap align-items-center">
-    <input @bind="name" class="form-control" style="width: 19rem; height: 2.5rem" placeholder="Име" />
+    <button class="btn btn-primary" style="width: 19rem; height: 2.75rem"
+            @onclick="OnCreateClicked"
+            disabled="@(showCreateForm && !CanSubmit)">
+        @(showCreateForm ? "Запази" : "Създай")
+    </button>
+    @if (showCreateForm)
+    {
+        <button class="btn btn-outline-secondary" style="height: 2.75rem" @onclick="CancelCreate">Откажи</button>
+    }
 </div>
-<div class="mb-3 d-flex gap-3 flex-wrap align-items-center">
-    <input type="date" class="form-control" style="width: 9rem; height: 2.75rem" @bind="start" />
-    <input type="date" class="form-control" style="width: 9rem; height: 2.75rem" @bind="end" />
-</div>
-<div class="mb-3 d-flex gap-3 flex-wrap align-items-center">
-    <button class="btn btn-primary" style="width: 19rem; height: 2.75rem" @onclick="Create">Създай</button>
-</div>
+@if (showCreateForm)
+{
+    <div class="mb-3 d-flex gap-3 flex-wrap align-items-center">
+        <input @ref="nameInput" @bind="name" class="form-control" style="width: 19rem; height: 2.5rem" placeholder="Име" />
+    </div>
+    <div class="mb-3 d-flex gap-3 flex-wrap align-items-center">
+        <input type="date" class="form-control" style="width: 9rem; height: 2.75rem" @bind="start" />
+        <input type="date" class="form-control" style="width: 9rem; height: 2.75rem" @bind="end" />
+    </div>
+}
 
 @if (!string.IsNullOrEmpty(errorMessage))
 {
@@ -53,13 +64,62 @@
     List<Domain.Entities.Event> events = new();
     string? errorMessage;
     DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+    ElementReference nameInput;
+    bool showCreateForm;
+    bool focusName;
+    bool CanSubmit => showCreateForm && !string.IsNullOrWhiteSpace(name) && start <= end;
 
     protected override async Task OnInitializedAsync()
         => events = await EventSvc.GetAllEventsAsync();
 
-    async Task Create()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-      
+        if (focusName && showCreateForm)
+        {
+            focusName = false;
+            try
+            {
+                await nameInput.FocusAsync();
+            }
+            catch
+            {
+                // Ignore focus failures
+            }
+        }
+    }
+
+    async Task OnCreateClicked()
+    {
+        if (!showCreateForm)
+        {
+            PrefillCreateForm();
+            showCreateForm = true;
+            errorMessage = null;
+            focusName = true;
+            return;
+        }
+
+        await Create();
+    }
+
+    void CancelCreate()
+    {
+        showCreateForm = false;
+        errorMessage = null;
+        PrefillCreateForm();
+        StateHasChanged();
+    }
+
+    void PrefillCreateForm()
+    {
+        var todayDate = DateOnly.FromDateTime(DateTime.Today);
+        name = $"Базар {todayDate}";
+        start = todayDate;
+        end = todayDate;
+    }
+
+    async Task Create()
+    {      
         var result = await EventSvc.CreateEventAsync(name, start, end);
         if (!result.Success)
         {
@@ -70,14 +130,14 @@
         events.Insert(0, result.Data!);
 
         /* TODO: @IvayloK - replace the lines above if you need to reload all the events and keep the data updated on all the devices
-        in cases where other users might have created events simultaneously */
+        in cases where other users might have created events simultaneously. This come along with creating of a new SignalR notification
+        to all the connected to the app clients. Once uncomenting this one, make sure a new method is created in the SignalRNotificationService*/
         //await EventSvc.CreateEventAsync(name, start, end);
-        //events = await EventSvc.GetAllEAsyncvents(); // Reload all events
+        //events = await EventSvc.GetAllEventsAsync(); // Reload all events
         
         // Reset form
-        name = $"Базар {DateOnly.FromDateTime(DateTime.Today)}";
-        start = DateOnly.FromDateTime(DateTime.Today);
-        end = DateOnly.FromDateTime(DateTime.Today);
+        PrefillCreateForm();
+        showCreateForm = false;
         errorMessage = null;
     }
 

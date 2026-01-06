@@ -15,4 +15,9 @@ internal sealed class SignalRNotificationService(IHubContext<SalesHub> hubContex
             .Group(SalesHub.GroupNameForDay(eventDayId))
             .SendAsync("SaleCreated", eventDayId, saleId, ct);
     }
+
+    public async Task NotifyEventCreatedAsync(int eventId, CancellationToken ct = default)
+    {
+        //TODO: Implement along with Events.razor(132-136)
+    }
 }

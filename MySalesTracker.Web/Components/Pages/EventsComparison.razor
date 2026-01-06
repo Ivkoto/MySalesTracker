@@ -1,0 +1,260 @@
+@page "/statistics/compare-events"
+@attribute [Authorize]
+
+@using EventSummaryDto = MySalesTracker.Application.DTOs.EventSummary
+
+@inject EventService EventSvc
+@inject NavigationManager Nav
+
+@if (isLoading)
+{
+    <div class="alert alert-info">Зареждане на събития...</div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger py-2 px-3 mb-3">@errorMessage</div>
+}
+else
+{
+    <div class="container-fluid px-0">
+        <div class="d-flex flex-wrap gap-3 align-items-start justify-content-between mb-3">
+            <div>
+                <div class="text-uppercase small text-muted">Сравнение на събития</div>
+                <h2 class="mb-1">Обща статистика по събития</h2>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-3">
+                <div class="card shadow-sm sticky-top" style="top: 1rem;">
+                    <div class="card-body">
+                        <div class="fw-semibold mb-2">Събития</div>
+                        <div class="d-flex flex-column gap-2">
+                            @foreach (var ev in events)
+                            {
+                                var isSelected = selectedEventIds.Contains(ev.EventId);
+                                <button class="btn btn-sm w-100 @(isSelected ? "btn-primary" : "btn-outline-secondary")"
+                                        @onclick="@(() => ToggleEvent(ev.EventId))">
+                                    <div class="d-flex flex-column text-start">
+                                        <span class="fw-semibold">@ev.Name</span>
+                                        <small class="text-muted">@($"{ev.StartDate:dd.MM} → {ev.EndDate:dd.MM}")</small>
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                        <div class="d-flex gap-3 mt-3 flex-wrap">
+                            <button class="btn btn-link p-0" @onclick="SelectLastThree">Последни 3</button>
+                            <button class="btn btn-link p-0" @onclick="SelectAll">Всички</button>
+                            <button class="btn btn-link p-0 text-danger" @onclick="ClearSelection">Изчисти</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-9">
+                @if (!summaries.Any())
+                {
+                    <div class="alert alert-info">Няма избрани събития. Избери едно или повече събития.</div>
+                }
+                else
+                {
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <div class="text-muted small">Всички стойности идват от „Обща статистика“.</div>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="table table-bordered align-middle mb-0 comparison-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="min-width: 10rem;">Показател</th>
+                                        @foreach (var ev in summaries)
+                                        {
+                                            <th class="text-end">@ev.EventName @($"{ev.StartDate:dd.MM}-{ev.EndDate:dd.MM}")</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in BuildRows())
+                                    {
+                                        <tr class="@row.RowClass">
+                                            <td>@row.Label</td>
+                                            @foreach (var ev in summaries)
+                                            {
+                                                var value = row.ValueSelector(ev);
+                                                <td class="text-end">@(row.IsCurrency ? FormatCurrency(value) : FormatNumber(value))</td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    List<Domain.Entities.Event> events = new();
+    List<EventSummaryDto> summaries = new();
+    HashSet<int> selectedEventIds = new();
+    bool isLoading = true;
+    string? errorMessage;
+    static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+
+    protected override async Task OnInitializedAsync()
+    {
+        ParseQuery();
+        await LoadEventsAsync();
+        await LoadSummariesAsync();
+    }
+
+    void ParseQuery()
+    {
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("events", out var evValues))
+        {
+            var parsed = evValues
+                .SelectMany(v => (v ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Select(v => int.TryParse(v, out var id) ? id : (int?)null)
+                .Where(v => v.HasValue)
+                .Select(v => v!.Value);
+
+            selectedEventIds = parsed.ToHashSet();
+        }
+    }
+
+    async Task LoadEventsAsync()
+    {
+        try
+        {
+            events = await EventSvc.GetAllEventsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Грешка при зареждане на събития: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    async Task LoadSummariesAsync()
+    {
+        if (!selectedEventIds.Any())
+        {
+            summaries = new();
+            PersistQuery();
+            StateHasChanged();
+            return;
+        }
+
+        var result = await EventSvc.GetEventSummariesAsync(selectedEventIds);
+        if (!result.Success || result.Data is null)
+        {
+            errorMessage = result.ErrorMessage ?? "Неуспешно зареждане на статистика.";
+            summaries = new();
+        }
+        else
+        {
+            summaries = result.Data;
+            errorMessage = null;
+        }
+
+        PersistQuery();
+        StateHasChanged();
+    }
+
+    async Task ToggleEvent(int eventId)
+    {
+        if (!selectedEventIds.Add(eventId))
+        {
+            selectedEventIds.Remove(eventId);
+        }
+
+        await LoadSummariesAsync();
+    }
+
+    async Task SelectLastThree()
+    {
+        selectedEventIds = events
+            .OrderByDescending(e => e.EndDate)
+            .Take(3)
+            .Select(e => e.EventId)
+            .ToHashSet();
+
+        await LoadSummariesAsync();
+    }
+
+    async Task SelectAll()
+    {
+        selectedEventIds = events.Select(e => e.EventId).ToHashSet();
+        await LoadSummariesAsync();
+    }
+
+    async Task ClearSelection()
+    {
+        selectedEventIds.Clear();
+        await LoadSummariesAsync();
+    }
+
+    void PersistQuery()
+    {
+        var query = new Dictionary<string, string?>();
+        if (selectedEventIds.Any())
+        {
+            var ordered = events
+                .Where(e => selectedEventIds.Contains(e.EventId))
+                .OrderByDescending(e => e.EndDate)
+                .Select(e => e.EventId.ToString());
+
+            query["events"] = string.Join(",", ordered);
+        }
+
+        var uri = QueryHelpers.AddQueryString("/statistics/compare-events", query);
+        var current = Nav.ToAbsoluteUri(Nav.Uri).PathAndQuery;
+        var target = Nav.ToAbsoluteUri(uri).PathAndQuery;
+        if (!string.Equals(current, target, StringComparison.OrdinalIgnoreCase))
+        {
+            Nav.NavigateTo(uri, replace: true);
+        }
+    }
+
+    string FormatCurrency(decimal value) => value.ToString("0.00 лв", Bg);
+    string FormatNumber(decimal value) => value.ToString("0.##", Bg);
+
+    IEnumerable<ComparisonRow> BuildRows()
+    {
+        yield return new ComparisonRow("Брой Тотем", "table-light", s => s.TotemCount, false);
+
+        foreach (var productName in GetAllProductNames(s => s.TotemProductsCount))
+        {
+            yield return new ComparisonRow($"↳ {productName}", "table-secondary", s => s.TotemProductsCount.GetValueOrDefault(productName, 0), false);
+        }
+
+        yield return new ComparisonRow("Брой Гора", "table-light", s => s.GoraCount, false);
+
+        foreach (var productName in GetAllProductNames(s => s.GoraProductsCount))
+        {
+            yield return new ComparisonRow($"↳ {productName}", "table-secondary", s => s.GoraProductsCount.GetValueOrDefault(productName, 0), false);
+        }
+
+        yield return new ComparisonRow("Оборот Тотем", string.Empty, s => s.TotemRevenue, true);
+        yield return new ComparisonRow("Оборот Керамика", string.Empty, s => s.CeramicsRevenue, true);
+        yield return new ComparisonRow("Оборот Гора", string.Empty, s => s.GoraRevenue, true);
+        yield return new ComparisonRow("Оборот Общо", "table-light fw-semibold", s => s.TotalRevenue, true);
+    }
+
+    IEnumerable<string> GetAllProductNames(Func<EventSummaryDto, Dictionary<string, int>> selector)
+    {
+        return summaries
+            .SelectMany(s => selector(s).Keys)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed record ComparisonRow(string Label, string RowClass, Func<EventSummaryDto, decimal> ValueSelector, bool IsCurrency);
+}

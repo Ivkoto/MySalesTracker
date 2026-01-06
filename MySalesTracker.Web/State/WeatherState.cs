@@ -11,6 +11,5 @@ public sealed class WeatherState
 
     public Summary? LastSummary { get; private set; }
 
-    public void Store(Summary summary)
-        => LastSummary = summary;
+    public void Store(Summary summary) => LastSummary = summary;
 }
