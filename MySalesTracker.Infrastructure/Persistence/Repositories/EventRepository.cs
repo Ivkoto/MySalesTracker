@@ -15,6 +15,7 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
         var events = await context.Events
             .Where(e => e.StartDate.Year == year || e.EndDate.Year == year)
             .Select(e => new { e.Name, e.StartDate, e.EndDate })
+            .OrderByDescending(e => e.EndDate)
             .ToListAsync(ct);
 
         return [.. events.Select(e => (e.Name, e.StartDate, e.EndDate))];
@@ -36,7 +37,7 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
 
         return await context.Events
             .Include(e => e.Days)
-            .OrderByDescending(e => e.EventId)
+            .OrderByDescending(e => e.EndDate)
             .ToListAsync(ct);
     }
 
@@ -66,6 +67,45 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
             //.AsSplitQuery()
             .FirstOrDefaultAsync(e => e.EventId == eventId, ct);
     }
+
+    public async Task<List<Event>> GetEventsWithAllDataAsync(IReadOnlyCollection<int> eventIds, CancellationToken ct)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(ct);
+
+        return await context.Events
+            .AsNoTracking()
+            .Where(e => eventIds.Contains(e.EventId))
+            .Include(e => e.Days)
+                .ThenInclude(d => d.Sales)
+                    .ThenInclude(s => s.Product)
+            .Include(e => e.Days)
+                .ThenInclude(d => d.Payments)
+            .OrderByDescending(e => e.EndDate)
+            .ToListAsync(ct);
+    }
+
+    public async Task<Event?> GetEventWithDaysOnlyAsync(int eventId, CancellationToken ct)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(ct);
+
+        return await context.Events
+            .AsNoTracking()
+            .Include(e => e.Days)
+            .FirstOrDefaultAsync(e => e.EventId == eventId, ct);
+    }
+
+    public async Task<List<EventDay>> GetEventDaysWithDataAsync(int eventId, IReadOnlyCollection<int> dayIds, CancellationToken ct)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(ct);
+
+        return await context.EventDays
+            .AsNoTracking()
+            .Where(d => d.EventId == eventId && dayIds.Contains(d.EventDayId))
+            .Include(d => d.Sales)
+                .ThenInclude(s => s.Product)
+            .Include(d => d.Payments)
+            .ToListAsync(ct);
+    }    
 
     public async Task<EventDay?> UpdateStartingPettyCashAsync(int eventDayId, decimal? amount, CancellationToken ct)
     {

@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>6970513b-11b8-4ddb-84f8-ab58c3fe46c3</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.DevTunnels" Version="13.0.2-preview.1.25603.5" />
+    <PackageReference Include="Aspire.Hosting.SqlServer" Version="13.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MySalesTracker.AspireServiceDefaults\MySalesTracker.AspireServiceDefaults.csproj" />
+    <ProjectReference Include="..\MySalesTracker.Web\MySalesTracker.Web.csproj" />
+  </ItemGroup>
+
+</Project>

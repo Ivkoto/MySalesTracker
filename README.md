@@ -1,17 +1,26 @@
 # MySalesTracker
 
-Blazor Server (.NET 9) application for tracking event sales with brand-based pricing rules. Built with Clean Architecture principles, using Entity Framework Core (SQL Server), SignalR for real-time updates, and a mobile-optimized UI.
+Blazor Server (.NET 9) application for tracking event sales with brand-based pricing rules. Built with Clean Architecture principles, using Entity Framework Core (SQL Server), SignalR for real-time updates, .NET Aspire for local orchestration and observability, and a mobile-optimized UI.
 
 ## Quick start
 
 #### Prerequisites
 
 - .NET SDK 9.0+
-- SQL Server (LocalDB or full SQL Server)
+- SQL Server (LocalDB or full SQL Server) OR Docker Desktop (for Aspire orchestration)
 - A modern browser (mobile-friendly)
 
-#### Configure database and SignalR
+#### Run the app
 
+**Option 1: Using .NET Aspire (Recommended for local development)**
+- Set `MySalesTracker.AspireAppHost` as startup project in Visual Studio
+- Press F5 or run: `dotnet run --project MySalesTracker.AspireAppHost`
+- The Aspire dashboard opens automatically at `https://localhost:17157`
+- SQL Server 2017 runs in Docker container (auto-downloaded if needed)
+- Connection string is automatically provided by Aspire
+- View logs, traces, and metrics in the Aspire dashboard
+
+**Option 2: Direct run (Traditional approach)**
 - Edit `MySalesTracker.Web/appsettings.json`:
   ```json
   {
@@ -23,9 +32,6 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
     }
   }
   ```
-
-#### Run the app
-
 - From the solution root:
   - Restore/build: `dotnet build`
   - Run: `dotnet run --project MySalesTracker.Web`
@@ -46,15 +52,30 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
   - Opens in standalone mode (no browser UI)
   - App icons and splash screens
   - Requires HTTPS for mobile installation
-- Events and event days
-- Real-time sales sync across devices (SignalR push per event day)
-- Sales entry per product with brand-based rules
+- **.NET Aspire Orchestration** (local development)
+  - Automatic SQL Server 2017 container management
+  - Built-in observability dashboard with logs, traces, and metrics
+  - OpenTelemetry integration for EF Core and SQL queries
+  - Health checks and service discovery
+- **Event Management**
+  - Create events with date ranges
+  - Auto-generate event days
+  - Real-time sales sync across devices (SignalR push per event day)
+- **Sales Entry**
+  - Sales entry per product with brand-based rules
   - `Керамика` (ceramics): manual price entry with decimal keypad on mobile
   - `Свещи/Гора` and `Тотем`: select price from rules; the selected price is the total for the units
-- Discount input per sale (amount) with inline validation
-- Grouped view by brand with daily totals
-- Daily sales summary by brands and available payments by payment method.
-- Sales statistics by brands and payments available for the entire event.
+  - Discount input per sale (amount) with inline validation
+  - Edit and delete sales
+  - Grouped view by brand with daily totals
+- **Statistics & Reports**
+  - Daily sales summary by brands and payment methods
+  - Event summary with aggregated statistics across all days
+  - **Compare Days**: Select specific days from an event to compare side-by-side (cards or table view)
+  - **Compare Events**: Select multiple events to compare revenue, counts, and payments
+  - Product-level breakdowns for Totem and Gora brands (expandable in UI)
+  - Query string persistence for sharing specific comparisons
+
 - Weather page (optional utility)
   - City search, 1 to 10 days forecast
   - Temperature and wind per hour
@@ -96,6 +117,15 @@ The app stores encryption keys in the `DataProtection-Keys/` folder (not in the 
 - **Private app**: `robots.txt` and `noindex` meta tag prevent search engine crawling
 - **Secrets**: `appsettings.Production.json` is gitignored and must be created manually on server
 - **Publish profiles**: Excluded from repository to protect deployment credentials
+
+## Architecture & Project Structure
+
+- **MySalesTracker.Domain** - Entities, enums, domain models, and pure business logic
+- **MySalesTracker.Application** - Services, DTOs, interfaces (application layer)
+- **MySalesTracker.Infrastructure** - EF Core repositories, external services, SignalR hubs
+- **MySalesTracker.Web** - Blazor Server UI, pages, components
+- **MySalesTracker.AspireAppHost** - .NET Aspire orchestration host
+- **MySalesTracker.AspireServiceDefaults** - Shared Aspire telemetry and service configuration
 
 ## Branching Strategy
 

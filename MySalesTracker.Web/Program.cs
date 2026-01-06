@@ -5,7 +5,13 @@ using MySalesTracker.Infrastructure.Extensions;
 using MySalesTracker.Web.Components;
 using MySalesTracker.Web.State;
 
+
 var builder = WebApplication.CreateBuilder(args);
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.AddServiceDefaults();
+}
 
 var dataProtection = builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys")))
@@ -68,5 +74,10 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 app.MapInfrastructureEndpoints(builder.Configuration);
 app.MapAuthEndpoints();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapDefaultEndpoints();
+}
 
 app.Run();

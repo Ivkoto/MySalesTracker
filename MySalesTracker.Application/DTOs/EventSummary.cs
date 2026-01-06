@@ -11,6 +11,11 @@ public sealed class EventSummary
     public required string EventName { get; init; }
 
     /// <summary>
+    /// Identifier of the event.
+    /// </summary>
+    public int EventId { get; init; }
+
+    /// <summary>
     /// The start date of the event.
     /// </summary>
     public required DateOnly StartDate { get; init; }

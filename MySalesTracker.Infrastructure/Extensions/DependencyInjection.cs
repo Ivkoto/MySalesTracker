@@ -13,7 +13,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        services.AddDbContextFactory<AppDbContext>(opt => opt.UseSqlServer(configuration.GetConnectionString("DatabaseConnection")));
+        var aspireConn = configuration.GetConnectionString("sql2017");
+        var defaultConn = configuration.GetConnectionString("DatabaseConnection");
+        var connString = !string.IsNullOrEmpty(aspireConn) ? aspireConn : defaultConn;
+
+        services.AddDbContextFactory<AppDbContext>(opt => opt.UseSqlServer(connString));
 
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<ISaleRepository, SaleRepository>();

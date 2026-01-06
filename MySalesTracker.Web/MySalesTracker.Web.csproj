@@ -15,6 +15,7 @@
 
  <ItemGroup>
    <ProjectReference Include="..\MySalesTracker.Application\MySalesTracker.Application.csproj" />
+   <ProjectReference Include="..\MySalesTracker.AspireServiceDefaults\MySalesTracker.AspireServiceDefaults.csproj" />
    <ProjectReference Include="..\MySalesTracker.Infrastructure\MySalesTracker.Infrastructure.csproj" />
  </ItemGroup>
 

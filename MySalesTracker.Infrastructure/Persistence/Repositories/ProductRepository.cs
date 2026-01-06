@@ -13,6 +13,7 @@ internal class ProductRepository(IDbContextFactory<AppDbContext> contextFactory)
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
         return await context.Products
+                .AsNoTracking()
                 .Where(p => p.IsActive)
                 .OrderByDescending(p => p.Brand)
                 .ToListAsync(ct);

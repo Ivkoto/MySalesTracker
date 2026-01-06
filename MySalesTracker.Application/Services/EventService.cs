@@ -3,6 +3,7 @@ using MySalesTracker.Application.DTOs;
 using MySalesTracker.Application.Interfaces;
 using MySalesTracker.Domain.Entities;
 using MySalesTracker.Domain.Enums;
+using MySalesTracker.Domain.Models;
 using MySalesTracker.Domain.Services;
 
 namespace MySalesTracker.Application.Services;
@@ -154,77 +155,11 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
                 return ServiceResult<EventSummary>.FailureResult("Събитието не е намерено");
             }
 
-            // Aggregate all sales across all event days
-            var allSales = evt.Days.SelectMany(d => d.Sales).ToList();
-            var allPayments = evt.Days.SelectMany(d => d.Payments).ToList();
-
-            // Calculate counts by brand (only TOTEM and Candles)
-            var totemSales = allSales.Where(s => s.Product.Brand == Brand.Totem).ToList();
-            var totemCount = totemSales.Sum(s => s.QuantityUnits);
-            var totemProductsCount = totemSales
-                .GroupBy(s => s.Product.Name)
-                .ToDictionary(g => g.Key, g => g.Sum(s => s.QuantityUnits));
-
-            var goraSales = allSales.Where( s => s.Product.Brand == Brand.Candles).ToList();
-            var goraCount = goraSales.Sum(s => s.QuantityUnits);
-            var goraProductsCount = goraSales
-                .GroupBy(s => s.Product.Name)
-                .ToDictionary(g => g.Key, g => g.Sum(s => s.QuantityUnits));
-
-            // Calculate revenue by brand (price - discount)
-            var totemRevenue = allSales
-                .Where(s => s.Product.Brand == Brand.Totem)
-                .Sum(s => s.Price - s.DiscountValue);
-
-            var ceramicsRevenue = allSales
-                .Where(s => s.Product.Brand == Brand.Ceramics)
-                .Sum(s => s.Price - s.DiscountValue);
-
-            var goraRevenue = allSales
-                .Where(s => s.Product.Brand == Brand.Candles)
-                .Sum(s => s.Price - s.DiscountValue);
-
-            var totalRevenue = totemRevenue + ceramicsRevenue + goraRevenue;
-
-            // Calculate payment totals by method
-            var cashTotal = allPayments
-                .Where(p => p.Method == PaymentMethod.Cash)
-                .Sum(p => p.Amount);
-
-            var cardTotal = allPayments
-                .Where(p => p.Method == PaymentMethod.Card)
-                .Sum(p => p.Amount);
-
-            var revolutLidiaTotal = allPayments
-                .Where(p => p.Method == PaymentMethod.RevolutLidia)
-                .Sum(p => p.Amount);
-
-            var revolutIvayloTotal = allPayments
-                .Where(p => p.Method == PaymentMethod.RevolutIvaylo)
-                .Sum(p => p.Amount);
+            var summary = BuildEventSummary(evt);
 
             logger.LogInformation(
                 "Generated summary for Event {EventId}: TotalRevenue={TotalRevenue}, TotalPayments={TotalPayments}",
-                eventId, totalRevenue, cashTotal + cardTotal + revolutLidiaTotal + revolutIvayloTotal);
-
-            var summary = new EventSummary
-            {
-                EventName = evt.Name,
-                StartDate = evt.StartDate,
-                EndDate = evt.EndDate,
-                TotemCount = totemCount,
-                TotemProductsCount = totemProductsCount,
-                TotemRevenue = totemRevenue,
-                GoraCount = goraCount,
-                GoraProductsCount = goraProductsCount,
-                GoraRevenue = goraRevenue,
-                CeramicsRevenue = ceramicsRevenue,
-                TotalRevenue = totalRevenue,
-                CashTotal = cashTotal,
-                CardTotal = cardTotal,
-                RevolutLidiaTotal = revolutLidiaTotal,
-                RevolutIvayloTotal = revolutIvayloTotal
-            };
+                eventId, summary.TotalRevenue, summary.CashTotal + summary.CardTotal + summary.RevolutLidiaTotal + summary.RevolutIvayloTotal);
 
             return ServiceResult<EventSummary>.SuccessResult(summary);
         }
@@ -232,6 +167,133 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
         {
             logger.LogError(ex, "Failed to get event summary for Event {EventId}", eventId);
             return ServiceResult<EventSummary>.FailureResult($"Грешка при зареждане на статистика: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<EventStatisticsBundle>> GetStatisticsBundleAsync(
+        int eventId,
+        IReadOnlyCollection<int>? selectedDayIds = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var eventShell = await eventRepository.GetEventWithDaysOnlyAsync(eventId, ct);
+            if (eventShell is null)
+            {
+                logger.LogWarning("Event with ID {EventId} not found", eventId);
+                return ServiceResult<EventStatisticsBundle>.FailureResult("Събитието не е намерено");
+            }
+
+            var orderedDays = eventShell.Days.OrderBy(d => d.Date).ToList();
+            var eventDays = orderedDays
+                .Select(d => new EventDayInfo { EventDayId = d.EventDayId, Date = d.Date })
+                .ToList();
+
+            var selectedIds = selectedDayIds is { Count: > 0 }
+                ? [.. selectedDayIds]
+                : new HashSet<int>();
+
+            // Load full event data once to build summary and reuse day data where possible.
+            var eventWithData = await eventRepository.GetEventWithAllDataAsync(eventId, ct);
+            if (eventWithData is null)
+            {
+                logger.LogWarning("Event with ID {EventId} not found when loading data for stats bundle", eventId);
+                return ServiceResult<EventStatisticsBundle>.FailureResult("Събитието не е намерено");
+            }
+
+            var summary = BuildEventSummary(eventWithData);
+
+            var daysWithData = eventWithData.Days
+                .Where(d => selectedIds.Contains(d.EventDayId))
+                .ToDictionary(d => d.EventDayId, d => d);
+
+            var missingDayIds = selectedIds.Where(id => !daysWithData.ContainsKey(id)).ToList();
+            if (missingDayIds.Count > 0)
+            {
+                var extraDays = await eventRepository.GetEventDaysWithDataAsync(eventId, missingDayIds, ct);
+                foreach (var extra in extraDays)
+                {
+                    daysWithData[extra.EventDayId] = extra;
+                }
+            }
+
+            var daySummaries = daysWithData.Values
+                .Select(BuildDayStatistics)
+                .OrderByDescending(ds => ds.Date)
+                .ToList();
+
+            var bundle = new EventStatisticsBundle
+            {
+                EventSummary = summary,
+                EventDays = eventDays,
+                DaySummaries = daySummaries
+            };
+
+            return ServiceResult<EventStatisticsBundle>.SuccessResult(bundle);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to build statistics bundle for Event {EventId}", eventId);
+            return ServiceResult<EventStatisticsBundle>.FailureResult($"Грешка при зареждане на статистиките: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<List<DayStatistics>>> GetDayStatisticsAsync(
+        int eventId,
+        IReadOnlyCollection<int> dayIds,
+        CancellationToken ct = default)
+    {
+        if (dayIds.Count == 0)
+        {
+            return ServiceResult<List<DayStatistics>>.FailureResult("Няма избрани дни.");
+        }
+
+        try
+        {
+            var days = await eventRepository.GetEventDaysWithDataAsync(eventId, dayIds, ct);
+            if (days.Count == 0)
+            {
+                return ServiceResult<List<DayStatistics>>.FailureResult("Дните не са намерени.");
+            }
+
+            var summaries = days.Select(BuildDayStatistics).ToList();
+            return ServiceResult<List<DayStatistics>>.SuccessResult(summaries);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to load day statistics for Event {EventId}", eventId);
+            return ServiceResult<List<DayStatistics>>.FailureResult($"Грешка при зареждане: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<List<EventSummary>>> GetEventSummariesAsync(
+        IReadOnlyCollection<int> eventIds,
+        CancellationToken ct = default)
+    {
+        if (eventIds.Count == 0)
+        {
+            return ServiceResult<List<EventSummary>>.FailureResult("Няма избрани събития.");
+        }
+
+        try
+        {
+            var events = await eventRepository.GetEventsWithAllDataAsync(eventIds, ct);
+            if (events.Count == 0)
+            {
+                return ServiceResult<List<EventSummary>>.FailureResult("Събитията не са намерени.");
+            }
+
+            var summaries = events
+                .Select(BuildEventSummary)
+                .OrderByDescending(s => s.EndDate)
+                .ToList();
+
+            return ServiceResult<List<EventSummary>>.SuccessResult(summaries);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to load event summaries for comparison");
+            return ServiceResult<List<EventSummary>>.FailureResult($"Грешка при зареждане: {ex.Message}");
         }
     }
 
@@ -265,5 +327,103 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
             logger.LogError(ex, "Error while updating StartingPettyCash for EventDay {EventDayId}", eventDayId);
             return ServiceResult<EventDay>.FailureResult($"Грешка при обновяване: {ex.Message}");
         }
+    }
+
+    private static EventSummary BuildEventSummary(Event evt)
+    {
+        var allSales = evt.Days.SelectMany(d => d.Sales).ToList();
+        var allPayments = evt.Days.SelectMany(d => d.Payments).ToList();
+
+        // Calculate counts by brand (only TOTEM and Candles)
+        var totemSales = allSales.Where(s => s.Product.Brand == Brand.Totem).ToList();
+        var totemCount = totemSales.Sum(s => s.QuantityUnits);
+        var totemProductsCount = totemSales
+            .GroupBy(s => s.Product.Name)
+            .ToDictionary(g => g.Key, g => g.Sum(s => s.QuantityUnits));
+
+        var goraSales = allSales.Where(s => s.Product.Brand == Brand.Candles).ToList();
+        var goraCount = goraSales.Sum(s => s.QuantityUnits);
+        var goraProductsCount = goraSales
+            .GroupBy(s => s.Product.Name)
+            .ToDictionary(g => g.Key, g => g.Sum(s => s.QuantityUnits));
+
+        // Calculate revenue by brand (price - discount)
+        var totemRevenue = allSales
+            .Where(s => s.Product.Brand == Brand.Totem)
+            .Sum(s => s.Price - s.DiscountValue);
+
+        var ceramicsRevenue = allSales
+            .Where(s => s.Product.Brand == Brand.Ceramics)
+            .Sum(s => s.Price - s.DiscountValue);
+
+        var goraRevenue = allSales
+            .Where(s => s.Product.Brand == Brand.Candles)
+            .Sum(s => s.Price - s.DiscountValue);
+
+        var totalRevenue = totemRevenue + ceramicsRevenue + goraRevenue;
+
+        // Calculate payment totals by method
+        var cashTotal = allPayments
+            .Where(p => p.Method == PaymentMethod.Cash)
+            .Sum(p => p.Amount);
+
+        var cardTotal = allPayments
+            .Where(p => p.Method == PaymentMethod.Card)
+            .Sum(p => p.Amount);
+
+        var revolutLidiaTotal = allPayments
+            .Where(p => p.Method == PaymentMethod.RevolutLidia)
+            .Sum(p => p.Amount);
+
+        var revolutIvayloTotal = allPayments
+            .Where(p => p.Method == PaymentMethod.RevolutIvaylo)
+            .Sum(p => p.Amount);
+
+        return new EventSummary
+        {
+            EventName = evt.Name,
+            EventId = evt.EventId,
+            StartDate = evt.StartDate,
+            EndDate = evt.EndDate,
+            TotemCount = totemCount,
+            TotemProductsCount = totemProductsCount,
+            TotemRevenue = totemRevenue,
+            GoraCount = goraCount,
+            GoraProductsCount = goraProductsCount,
+            GoraRevenue = goraRevenue,
+            CeramicsRevenue = ceramicsRevenue,
+            TotalRevenue = totalRevenue,
+            CashTotal = cashTotal,
+            CardTotal = cardTotal,
+            RevolutLidiaTotal = revolutLidiaTotal,
+            RevolutIvayloTotal = revolutIvayloTotal
+        };
+    }
+
+    private static DayStatistics BuildDayStatistics(EventDay day)
+    {
+        var brandSummaries = SalesCalculations.GroupSalesByBrand(day.Sales);
+        var paymentsByMethod = PaymentCalculations.GroupPaymentsByMethod(day.Payments);
+
+        var totalPayments = PaymentCalculations.CalculateTotalPayments(day.Payments);
+        var totalSales = SalesCalculations.CalculateNetRevenue(day.Sales);
+        var difference = PaymentCalculations.CalculatePaymentDifference(totalPayments, totalSales);
+
+        var paymentSummary = new PaymentSummary
+        {
+            Payments = paymentsByMethod,
+            BrandSalesTotals = brandSummaries.ToDictionary(b => b.Brand, b => b.NetTotal),
+            TotalPayments = totalPayments,
+            TotalSales = totalSales,
+            Difference = difference
+        };
+
+        return new DayStatistics
+        {
+            EventDayId = day.EventDayId,
+            Date = day.Date,
+            StartingPettyCash = day.StartingPettyCash,
+            PaymentSummary = paymentSummary
+        };
     }
 }

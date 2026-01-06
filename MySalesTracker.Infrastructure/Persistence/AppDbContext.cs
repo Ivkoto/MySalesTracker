@@ -9,6 +9,11 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.EnableSensitiveDataLogging();
+    }
+
     public DbSet<Event> Events => Set<Event>();
     public DbSet<EventDay> EventDays => Set<EventDay>();
     public DbSet<Product> Products => Set<Product>();
@@ -40,4 +45,5 @@ public class AppDbContext : DbContext
             .HasConversion(brandToString)
             .HasMaxLength(50);
     }
+
 }
