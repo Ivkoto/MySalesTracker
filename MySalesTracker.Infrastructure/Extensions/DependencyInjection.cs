@@ -17,6 +17,11 @@ public static class DependencyInjection
         var defaultConn = configuration.GetConnectionString("DatabaseConnection");
         var connString = !string.IsNullOrEmpty(aspireConn) ? aspireConn : defaultConn;
 
+        if (string.IsNullOrWhiteSpace(connString))
+        {
+            throw new InvalidOperationException("No valid database connection string configured. Configure either 'sql2017' or 'DatabaseConnection' in the connectionStrings section.");
+        }
+
         services.AddDbContextFactory<AppDbContext>(opt => opt.UseSqlServer(connString));
 
         services.AddScoped<IEventRepository, EventRepository>();

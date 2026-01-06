@@ -345,19 +345,7 @@ else
             showSavedFeedback = true;
             StateHasChanged();
 
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await Task.Delay(700, feedBackCt.Token);
-                    if (!feedBackCt.IsCancellationRequested)
-                    {
-                        showSavedFeedback = false;
-                        await InvokeAsync(StateHasChanged);
-                    }
-                }
-                catch (TaskCanceledException) { }
-            });
+            _ = HideSavedFeedbackAsync(feedBackCt.Token);
 
             if (savedScrollPosition > 0)
             {
@@ -373,6 +361,22 @@ else
         {
             isSaving = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task HideSavedFeedbackAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(700, ct);
+            if (ct.IsCancellationRequested) return;
+
+            showSavedFeedback = false;
+            await InvokeAsync(StateHasChanged);            
+        }
+        catch (OperationCanceledException)
+        {
+            // expected when a new save cancels the timer
         }
     }
 
@@ -474,7 +478,7 @@ else
         editingSaleId = saleId;
         productId = sale.ProductId;
         
-        //TODO: Uncomment once there is option to chnages the entire product with the edit. Currenly the product stays as it is and only the price could be changed.
+        //TODO: Uncomment once there is option to change the entire product with the edit. Currently the product stays as it is and only the price could be changed.
         //await OnProductChanged();
 
         price = sale.Price;

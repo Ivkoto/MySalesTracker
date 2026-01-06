@@ -63,7 +63,7 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
                     .ThenInclude(s => s.Product)
             .Include(e => e.Days)
                 .ThenInclude(d => d.Payments)
-            //TODO: Test for N+1 and add if needed
+            //TODO: Enable if verify through testing that the query doesn't cause performance issues with realistic data volumes.
             //.AsSplitQuery()
             .FirstOrDefaultAsync(e => e.EventId == eventId, ct);
     }
@@ -81,6 +81,8 @@ internal class EventRepository(IDbContextFactory<AppDbContext> contextFactory) :
             .Include(e => e.Days)
                 .ThenInclude(d => d.Payments)
             .OrderByDescending(e => e.EndDate)
+            //TODO: Enable if verify through testing that the query doesn't cause performance issues with realistic data volumes.
+            //.AsSplitQuery()
             .ToListAsync(ct);
     }
 

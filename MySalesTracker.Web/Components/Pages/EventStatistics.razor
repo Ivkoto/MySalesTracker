@@ -218,9 +218,8 @@ else if (eventSummary is not null)
                                             <tr class="@row.RowClass">
                                                 <td>@row.Label</td>
                                                 <td class="text-end" style="font-weight: bold;">@FormatCurrency(row.EventValue)</td>
-                                                @foreach (var day in SelectedDaySummaries.OrderBy(d => d.Date))
+                                                @foreach (var value in SelectedDaySummaries.OrderBy(d => d.Date).Select(row.DayExtractor))
                                                 {
-                                                    var value = row.DayExtractor(day);
                                                     if (row.IsDifference)
                                                     {
                                                         <td class="text-end">
@@ -248,7 +247,7 @@ else if (eventSummary is not null)
 }
 
 @code {
-    [Parameter] public int? eventId { get; set; }
+    [Parameter] public int? EventId { get; set; }
 
     MySalesTracker.Application.DTOs.EventSummary? eventSummary;
     List<EventDayInfo> eventDays = new();
@@ -266,7 +265,7 @@ else if (eventSummary is not null)
 
     IEnumerable<DayStatistics> SelectedDaySummaries =>
         selectedDayIds.Select(id => dayCache.TryGetValue(id, out var ds) ? ds : null)
-                      .Where(ds => ds is not null)!;
+                      .OfType<DayStatistics>();
 
     decimal EventTotalPayments => eventSummary is null
         ? 0
@@ -337,9 +336,9 @@ else if (eventSummary is not null)
 
     async Task EnsureEventSelectedAsync()
     {
-        if (eventId.HasValue && eventId.Value > 0)
+        if (EventId.HasValue && EventId.Value > 0)
         {
-            currentEventId = eventId.Value;
+            currentEventId = EventId.Value;
             return;
         }
 
