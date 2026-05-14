@@ -3,21 +3,22 @@
 
 @inject EventService EventSvc
 
-<h2>Събития</h2>
-
-<div class="mb-3 d-flex gap-3 flex-wrap align-items-center">
-    <button class="btn btn-primary" style="width: 19rem; height: 2.75rem"
-            @onclick="OnCreateClicked"
-            disabled="@(showCreateForm && !CanSubmit)">
-        @(showCreateForm ? "Запази" : "Създай")
-    </button>
-    @if (showCreateForm)
-    {
-        <button class="btn btn-outline-secondary" style="height: 2.75rem" @onclick="CancelCreate">Откажи</button>
-    }
+<div class="events-page-header">
+    <h2>Събития</h2>
+    <div class="events-page-actions">
+        <button class="btn btn-primary events-create-button"
+                @onclick="OnCreateClicked"
+                disabled="@(showCreateForm && !CanSubmit)">
+            @(showCreateForm ? "Запази" : "Създай")
+        </button>
+    </div>
 </div>
+
 @if (showCreateForm)
 {
+    <div class="mb-3 d-flex gap-3 flex-wrap align-items-center">
+        <button class="btn btn-outline-secondary" style="height: 2.75rem" @onclick="CancelCreate">Откажи</button>
+    </div>
     <div class="mb-3 d-flex gap-3 flex-wrap align-items-center">
         <input @ref="nameInput" @bind="name" class="form-control" style="width: 19rem; height: 2.5rem" placeholder="Име" />
     </div>
@@ -34,28 +35,51 @@
   </div>
 }
 
-<ul>
+<section class="events-list" aria-label="Списък със събития">
     @foreach (var b in events)
     {
-        <li>
-            <h4>@b.Name</h4> (@b.StartDate → @b.EndDate)
-            <div class="mb-2">
-                <a href="@($"/event/{b.EventId}/summary")" class="btn btn-outline-success btn-sm">Обща статистика</a>
+        var isExpanded = expandedEventId == b.EventId;
+        var orderedDays = b.Days.OrderBy(x => x.Date).ToList();
+
+        <article class="event-card @(isExpanded ? "event-card-expanded" : "")"
+                 role="button"
+                 tabindex="0"
+                 aria-expanded="@isExpanded"
+                 aria-label="@($"{b.Name}: {(isExpanded ? "Скрий дни" : "Покажи дни")}")"
+                 @onclick="() => ToggleEventDays(b.EventId)"
+                 @onkeydown="args => OnEventCardKeyDown(args, b.EventId)">
+            <div class="event-card-header">
+                <h3 class="event-card-title">@b.Name</h3>
+                <div class="event-card-count">@GetDaysLabel(orderedDays.Count)</div>
             </div>
-            <div>
-                @* TODO: This OrderBy does not order the events by event date; it orders them by Event ID in the DB call that EF makes. *@
-                @foreach (var d in b.Days.OrderBy(x => x.Date))
-                {
-                    @* <li><a href="@($"/day/{d.EventDayId}")">@d.Date</a></li> *@
-                    <a href="@($"/day/{d.EventDayId}")"
-                       class="d-inline-block p-2 m-1 border rounded text-decoration-none event-day-item @(d.Date == today ? "current-day-highlight" : "")">
-                        <strong>@GetFormattedDate(d.Date)</strong>
-                    </a>
-                }
+
+            <div class="event-card-meta-row">
+                <div class="event-card-dates">
+                    <span>@b.StartDate</span>
+                    <span>@b.EndDate</span>
+                </div>
+                <div class="event-card-actions">
+                    <a href="@($"/event/{b.EventId}/summary")"
+                       class="btn btn-outline-success btn-sm"
+                       @onclick:stopPropagation="true">Статистика</a>
+                </div>
             </div>
-        </li>
+
+            @if (isExpanded)
+            {
+                <div class="event-days-grid" @onclick:stopPropagation="true">
+                    @foreach (var d in orderedDays)
+                    {
+                        <a href="@($"/day/{d.EventDayId}")"
+                           class="event-day-item @(d.Date == today ? "current-day-highlight" : "")">
+                            <strong>@GetFormattedDate(d.Date)</strong>
+                        </a>
+                    }
+                </div>
+            }
+        </article>
     }
-</ul>
+</section>
 
 @code {
     string name = $"Базар {DateOnly.FromDateTime(DateTime.Today)}";
@@ -67,6 +91,7 @@
     ElementReference nameInput;
     bool showCreateForm;
     bool focusName;
+    int? expandedEventId;
     bool CanSubmit => showCreateForm && !string.IsNullOrWhiteSpace(name) && start <= end;
 
     protected override async Task OnInitializedAsync()
@@ -127,7 +152,9 @@
             return;
         }
 
-        events.Insert(0, result.Data!);
+        var savedEvent = result.Data!;
+        events.Insert(0, savedEvent);
+        expandedEventId = savedEvent.EventId;
 
         /* TODO: @IvayloK - replace the lines above if you need to reload all the events and keep the data updated on all the devices
         in cases where other users might have created events simultaneously. This come along with creating of a new SignalR notification
@@ -140,6 +167,22 @@
         showCreateForm = false;
         errorMessage = null;
     }
+
+    void ToggleEventDays(int eventId)
+    {
+        expandedEventId = expandedEventId == eventId ? null : eventId;
+    }
+
+    void OnEventCardKeyDown(KeyboardEventArgs args, int eventId)
+    {
+        if (args.Key is "Enter" or " ")
+        {
+            ToggleEventDays(eventId);
+        }
+    }
+
+    static string GetDaysLabel(int daysCount)
+        => daysCount == 1 ? "1 ден" : $"{daysCount} дни";
 
     string GetFormattedDate(DateOnly date)
     {

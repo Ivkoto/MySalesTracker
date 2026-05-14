@@ -59,6 +59,11 @@ main {
     height: 100vh;
     position: sticky;
     top: 0;
+    transition: width 150ms ease;
+  }
+
+  .sidebar-collapsed {
+    width: 4.75rem;
   }
 
   .top-row {
