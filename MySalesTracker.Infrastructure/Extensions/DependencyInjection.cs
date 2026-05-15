@@ -38,11 +38,11 @@ public static class DependencyInjection
         {
             options.EnableDetailedErrors = environment.IsDevelopment();
 
-            //TODO: Increase timeouts for mobile/slow connections
+            //Increase timeouts for mobile/slow connections
             options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
             options.HandshakeTimeout = TimeSpan.FromSeconds(30);
             options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-            //TODO: Maximum message size (default is 32KB, increase for larger payloads if needed)
+            //Maximum message size (default is 32KB, increase for larger payloads if needed)
             options.MaximumReceiveMessageSize = 102400; // 100KB
             //TODO: Remove or increase if this works worst.
             options.MaximumParallelInvocationsPerClient = 1;

@@ -10,7 +10,7 @@
 }
 
 .day-selector-card {
-    width: 20rem;
+    width: 100%;
 }
 
 .day-selector-grid {
@@ -27,7 +27,6 @@
 
 @media (max-width: 48rem) {
     .day-selector-card {
-        max-width: 100%;
         min-width: auto;
     }
 }

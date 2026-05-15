@@ -1,8 +1,264 @@
 .current-day-highlight {
-    background-color: lightgreen;
+    background-color: #d8f7dc;
+    border-color: #5cbf69;
+    color: #146c2e;
+}
+
+.events-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.events-page-header h2 {
+    margin: 0;
+}
+
+.events-page-actions {
+    flex: 0 0 auto;
+}
+
+.events-create-button {
+    width: 9.5rem;
+    min-height: 2.5rem;
+}
+
+.events-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+    width: 100%;
+}
+
+.event-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-height: 6.25rem;
+    border: 1px solid #d9e2ec;
+    border-radius: 0.25rem;
+    background: #fff;
+    padding: 0.75rem;
+    box-shadow: 0 0.15rem 0.45rem rgba(15, 23, 42, 0.06);
+    transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.event-card-expanded {
+    grid-column: 1 / -1;
+    aspect-ratio: auto;
+}
+
+.event-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.event-card-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    background: none;
+    -webkit-appearance: none;
+    appearance: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.event-card-toggle:focus {
+    outline: none;
+}
+
+.event-card-toggle:hover .event-card-count,
+.event-card-toggle:focus-visible .event-card-count {
+    border-color: #8bbbe8;
+    background-color: #fbfdff;
+}
+
+.event-card-toggle:hover .event-card-toggle-icon,
+.event-card-toggle:focus-visible .event-card-toggle-icon {
+    color: #258cfb;
+}
+
+.event-card-toggle:focus-visible {
+    outline: 2px solid rgba(37, 140, 251, 0.35);
+    outline-offset: 0.15rem;
+    border-radius: 999px;
+}
+
+.event-card-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+.event-card-count {
+    flex: 0 0 auto;
+    color: #495057;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.35rem 0.45rem;
+    border: 1px solid #d9e2ec;
+    border-radius: 999px;
+    background: #f8fafc;
+    white-space: nowrap;
+}
+
+.event-card-toggle-icon {
+    color: #6c757d;
+    font-size: 0.95rem;
+    line-height: 1;
+    padding-top: 0.15rem;
+}
+
+.event-card-meta-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 0.75rem;
+    margin-top: 0.55rem;
+}
+
+.event-card-dates {
+    color: #495057;
+    font-size: 0.88rem;
+    line-height: 1.2;
+}
+
+.event-card-dates span {
+    display: block;
+}
+
+.event-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+    gap: 0.35rem;
+}
+
+.event-card-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.1rem;
+    border-radius: 0.6rem;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.9rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.event-days-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(4rem, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.85rem;
 }
 
 .event-day-item {
-    width: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.45rem;
+    border: 1px solid #d9e2ec;
+    border-radius: 0.35rem;
+    color: #006bb7;
+    text-decoration: none;
     text-align: center;
+    background-color: #fff;
+}
+
+.event-day-item:hover,
+.event-day-item:focus {
+    border-color: #8bbbe8;
+    background-color: #f2f8fd;
+}
+
+@media (min-width: 576px) {
+    .events-list {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        gap: 0.85rem;
+    }
+
+    .event-card {
+        min-height: 7.5rem;
+        padding: 0.9rem;
+    }
+
+    .event-card-expanded {
+        min-height: 0;
+    }
+
+    .event-card-title {
+        font-size: 1.15rem;
+    }
+
+    .event-card-dates {
+        font-size: 0.82rem;
+    }
+
+    .event-card-count {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.5rem;
+    }
+
+    .event-card-actions .btn {
+        min-height: 2rem;
+        font-size: 0.78rem;
+    }
+
+    .event-days-grid {
+        grid-template-columns: repeat(auto-fill, minmax(4.5rem, 4.5rem));
+    }
+}
+
+@media (min-width: 1200px) {
+    .events-list {
+        grid-template-columns: repeat(auto-fit, minmax(21rem, 1fr));
+        gap: 1rem;
+    }
+
+    .event-card {
+        min-height: 8.25rem;
+        padding: 1rem;
+    }
+
+    .event-card-header {
+        gap: 1rem;
+    }
+
+    .event-card-title {
+        font-size: 1.2rem;
+        line-height: 1.2;
+    }
+
+    .event-card-meta-row {
+        gap: 1rem;
+    }
+
+    .event-card-dates {
+        font-size: 0.9rem;
+    }
+
+    .event-card-actions .btn {
+        min-height: 2.15rem;
+        padding-inline: 0.75rem;
+        font-size: 0.82rem;
+    }
 }
