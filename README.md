@@ -1,22 +1,22 @@
 # MySalesTracker
 
-Blazor Server (.NET 9) application for tracking event sales with brand-based pricing rules. Built with Clean Architecture principles, using Entity Framework Core (SQL Server), SignalR for real-time updates, .NET Aspire for local orchestration and observability, and a mobile-optimized UI.
+Blazor Server (.NET 10) application for tracking event sales with brand-based pricing rules. Built with Clean Architecture principles, using Entity Framework Core (SQL Server), SignalR for real-time updates, .NET Aspire for local orchestration and observability, and a mobile-optimised UI.
 
 ## Quick start
 
 #### Prerequisites
 
-- .NET SDK 9.0+
+- .NET SDK 10
 - SQL Server (LocalDB or full SQL Server) OR Docker Desktop (for Aspire orchestration)
 - A modern browser (mobile-friendly)
 
 #### Run the app
 
 **Option 1: Using .NET Aspire (Recommended for local development)**
-- Set `MySalesTracker.AspireAppHost` as startup project in Visual Studio
+- Set `MySalesTracker.AspireAppHost` as a startup project in Visual Studio
 - Press F5 or run: `dotnet run --project MySalesTracker.AspireAppHost`
 - The Aspire dashboard opens automatically at `https://localhost:17157`
-- SQL Server 2017 runs in Docker container (auto-downloaded if needed)
+- SQL Server 2017 runs in a Docker container (auto-downloaded if needed)
 - Connection string is automatically provided by Aspire
 - View logs, traces, and metrics in the Aspire dashboard
 
@@ -37,7 +37,7 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
   - Run: `dotnet run --project MySalesTracker.Web`
 - Or Ctrl + F5 in Visual Studio with `MySalesTracker.Web` as startup project.
 
-#### First run behavior
+#### First run behaviour
 
 - The app automatically applies EF migrations and seeds initial data (brands, products, price rules).
 - Navigate to:
@@ -79,7 +79,7 @@ Blazor Server (.NET 9) application for tracking event sales with brand-based pri
 - Weather page (optional utility)
   - City search, 1 to 10 days forecast
   - Temperature and wind per hour
-  - Color-coded hourly cards by temperature
+  - Colour-coded hourly cards by temperature
   - State preserved within the same browser tab
 
 ## Migrations & seeding
@@ -130,11 +130,11 @@ The app stores encryption keys in the `DataProtection-Keys/` folder (not in the 
 ## Branching Strategy
 
 - `feature/*`: Individual feature branches
-- `db/*`: Database related changes branch
+- `db/*`: Database-related changes branch
 - `bug/*`: Bug fix branches
 - `fix/*`: Small fixes and refactoring branches
 
-## Open-source component libraries for better visual experiance
+## Open-source component libraries for better visual experience
 
 - **Bootstrap components** https://icons.getbootstrap.com/
 
