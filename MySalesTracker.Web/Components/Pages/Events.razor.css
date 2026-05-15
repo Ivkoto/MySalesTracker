@@ -42,20 +42,7 @@
     background: #fff;
     padding: 0.75rem;
     box-shadow: 0 0.15rem 0.45rem rgba(15, 23, 42, 0.06);
-    cursor: pointer;
     transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
-}
-
-.event-card:hover,
-.event-card:focus {
-    border-color: #8bbbe8;
-    background-color: #fbfdff;
-    box-shadow: 0 0.2rem 0.55rem rgba(15, 23, 42, 0.1);
-    outline: none;
-}
-
-.event-card:focus-visible {
-    box-shadow: 0 0 0 0.2rem rgba(37, 140, 251, 0.25);
 }
 
 .event-card-expanded {
@@ -68,6 +55,44 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 0.75rem;
+    width: 100%;
+}
+
+.event-card-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    background: none;
+    -webkit-appearance: none;
+    appearance: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.event-card-toggle:focus {
+    outline: none;
+}
+
+.event-card-toggle:hover .event-card-count,
+.event-card-toggle:focus-visible .event-card-count {
+    border-color: #8bbbe8;
+    background-color: #fbfdff;
+}
+
+.event-card-toggle:hover .event-card-toggle-icon,
+.event-card-toggle:focus-visible .event-card-toggle-icon {
+    color: #258cfb;
+}
+
+.event-card-toggle:focus-visible {
+    outline: 2px solid rgba(37, 140, 251, 0.35);
+    outline-offset: 0.15rem;
+    border-radius: 999px;
 }
 
 .event-card-title {
@@ -91,6 +116,13 @@
     border-radius: 999px;
     background: #f8fafc;
     white-space: nowrap;
+}
+
+.event-card-toggle-icon {
+    color: #6c757d;
+    font-size: 0.95rem;
+    line-height: 1;
+    padding-top: 0.15rem;
 }
 
 .event-card-meta-row {

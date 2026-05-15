@@ -40,17 +40,20 @@
     {
         var isExpanded = expandedEventId == b.EventId;
         var orderedDays = b.Days.OrderBy(x => x.Date).ToList();
+        var eventDaysRegionId = $"event-days-{b.EventId}";
 
-        <article class="event-card @(isExpanded ? "event-card-expanded" : "")"
-                 role="button"
-                 tabindex="0"
-                 aria-expanded="@isExpanded"
-                 aria-label="@($"{b.Name}: {(isExpanded ? "Скрий дни" : "Покажи дни")}")"
-                 @onclick="() => ToggleEventDays(b.EventId)"
-                 @onkeydown="args => OnEventCardKeyDown(args, b.EventId)">
+        <article class="event-card @(isExpanded ? "event-card-expanded" : "")">
             <div class="event-card-header">
                 <h3 class="event-card-title">@b.Name</h3>
-                <div class="event-card-count">@GetDaysLabel(orderedDays.Count)</div>
+                <button type="button"
+                        class="event-card-toggle"
+                        aria-expanded="@isExpanded"
+                        aria-controls="@eventDaysRegionId"
+                        aria-label="@($"{(isExpanded ? "Скрий дни за" : "Покажи дни за")} {b.Name}")"
+                        @onclick="() => ToggleEventDays(b.EventId)">
+                    <span class="event-card-count">@GetDaysLabel(orderedDays.Count)</span>
+                    <span class="event-card-toggle-icon bi @(isExpanded ? "bi-chevron-up" : "bi-chevron-down")" aria-hidden="true"></span>
+                </button>
             </div>
 
             <div class="event-card-meta-row">
@@ -60,129 +63,118 @@
                 </div>
                 <div class="event-card-actions">
                     <a href="@($"/event/{b.EventId}/summary")"
-                       class="btn btn-outline-success btn-sm"
-                       @onclick:stopPropagation="true">Статистика</a>
+                       class="btn btn-outline-success btn-sm">Статистика</a>
                 </div>
             </div>
 
-            @if (isExpanded)
-            {
-                <div class="event-days-grid" @onclick:stopPropagation="true">
-                    @foreach (var d in orderedDays)
-                    {
-                        <a href="@($"/day/{d.EventDayId}")"
-                           class="event-day-item @(d.Date == today ? "current-day-highlight" : "")">
-                            <strong>@GetFormattedDate(d.Date)</strong>
-                        </a>
-                    }
-                </div>
-            }
+            <div id="@eventDaysRegionId" class="event-days-grid" hidden="@(!isExpanded)">
+                @foreach (var d in orderedDays)
+                {
+                    <a href="@($"/day/{d.EventDayId}")"
+                       class="event-day-item @(d.Date == today ? "current-day-highlight" : "")">
+                        <strong>@GetFormattedDate(d.Date)</strong>
+                    </a>
+                }
+            </div>
         </article>
     }
 </section>
 
 @code {
-    string name = $"Базар {DateOnly.FromDateTime(DateTime.Today)}";
-    DateOnly start = DateOnly.FromDateTime(DateTime.Today);
-    DateOnly end = DateOnly.FromDateTime(DateTime.Today);
-    List<Domain.Entities.Event> events = new();
-    string? errorMessage;
-    DateOnly today = DateOnly.FromDateTime(DateTime.Today);
-    ElementReference nameInput;
-    bool showCreateForm;
-    bool focusName;
-    int? expandedEventId;
-    bool CanSubmit => showCreateForm && !string.IsNullOrWhiteSpace(name) && start <= end;
+  string name = $"Базар {DateOnly.FromDateTime(DateTime.Today)}";
+  DateOnly start = DateOnly.FromDateTime(DateTime.Today);
+  DateOnly end = DateOnly.FromDateTime(DateTime.Today);
+  List<Domain.Entities.Event> events = new();
+  string? errorMessage;
+  DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+  ElementReference nameInput;
+  bool showCreateForm;
+  bool focusName;
+  int? expandedEventId;
+  bool CanSubmit => showCreateForm && !string.IsNullOrWhiteSpace(name) && start <= end;
 
-    protected override async Task OnInitializedAsync()
-        => events = await EventSvc.GetAllEventsAsync();
+  protected override async Task OnInitializedAsync()
+      => events = await EventSvc.GetAllEventsAsync();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (focusName && showCreateForm)
     {
-        if (focusName && showCreateForm)
-        {
-            focusName = false;
-            try
-            {
-                await nameInput.FocusAsync();
-            }
-            catch
-            {
-                // Ignore focus failures
-            }
-        }
+      focusName = false;
+      try
+      {
+        await nameInput.FocusAsync();
+      }
+      catch
+      {
+        // Ignore focus failures
+      }
+    }
+  }
+
+  async Task OnCreateClicked()
+  {
+    if (!showCreateForm)
+    {
+      PrefillCreateForm();
+      showCreateForm = true;
+      errorMessage = null;
+      focusName = true;
+      return;
     }
 
-    async Task OnCreateClicked()
-    {
-        if (!showCreateForm)
-        {
-            PrefillCreateForm();
-            showCreateForm = true;
-            errorMessage = null;
-            focusName = true;
-            return;
-        }
+    await Create();
+  }
 
-        await Create();
+  void CancelCreate()
+  {
+    showCreateForm = false;
+    errorMessage = null;
+    PrefillCreateForm();
+    StateHasChanged();
+  }
+
+  void PrefillCreateForm()
+  {
+    var todayDate = DateOnly.FromDateTime(DateTime.Today);
+    name = $"Базар {todayDate}";
+    start = todayDate;
+    end = todayDate;
+  }
+
+  async Task Create()
+  {      
+    var result = await EventSvc.CreateEventAsync(name, start, end);
+    if (!result.Success)
+    {
+      errorMessage = result.ErrorMessage;
+      return;
     }
 
-    void CancelCreate()
-    {
-        showCreateForm = false;
-        errorMessage = null;
-        PrefillCreateForm();
-        StateHasChanged();
-    }
-
-    void PrefillCreateForm()
-    {
-        var todayDate = DateOnly.FromDateTime(DateTime.Today);
-        name = $"Базар {todayDate}";
-        start = todayDate;
-        end = todayDate;
-    }
-
-    async Task Create()
-    {      
-        var result = await EventSvc.CreateEventAsync(name, start, end);
-        if (!result.Success)
-        {
-            errorMessage = result.ErrorMessage;
-            return;
-        }
-
-        var savedEvent = result.Data!;
-        events.Insert(0, savedEvent);
-        expandedEventId = savedEvent.EventId;
+    var savedEvent = result.Data!;
+    events.Insert(0, savedEvent);
+    expandedEventId = savedEvent.EventId;
 
         /* TODO: @IvayloK - replace the lines above if you need to reload all the events and keep the data updated on all the devices
         in cases where other users might have created events simultaneously. This come along with creating of a new SignalR notification
         to all the connected to the app clients. Once uncomenting this one, make sure a new method is created in the SignalRNotificationService*/
-        //await EventSvc.CreateEventAsync(name, start, end);
-        //events = await EventSvc.GetAllEventsAsync(); // Reload all events
-        
-        // Reset form
-        PrefillCreateForm();
-        showCreateForm = false;
-        errorMessage = null;
-    }
+      //await EventSvc.CreateEventAsync(name, start, end);
+      //events = await EventSvc.GetAllEventsAsync(); // Reload all events
 
-    void ToggleEventDays(int eventId)
-    {
-        expandedEventId = expandedEventId == eventId ? null : eventId;
-    }
+      // Reset form
+      PrefillCreateForm();
+    showCreateForm = false;
+    errorMessage = null;
+  }
 
-    void OnEventCardKeyDown(KeyboardEventArgs args, int eventId)
-    {
-        if (args.Key is "Enter" or " ")
-        {
-            ToggleEventDays(eventId);
-        }
-    }
+  void ToggleEventDays(int eventId)
+  {
+    expandedEventId = expandedEventId == eventId ? null : eventId;
+  }
 
-    static string GetDaysLabel(int daysCount)
-        => daysCount == 1 ? "1 ден" : $"{daysCount} дни";
+  static string GetDaysLabel(int daysCount)
+    => daysCount == 1 ? "1 ден" : $"{daysCount} дни";
+    
 
     string GetFormattedDate(DateOnly date)
     {
