@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using MySalesTracker.Domain.Enums;
 
 namespace MySalesTracker.Domain.Entities;
 
@@ -18,6 +19,8 @@ public sealed class EventDay
 
     [Column(TypeName = "decimal(8,2)")]
     public decimal? StartingPettyCash { get; set; }
+
+    public Currency StartingPettyCashCurrency { get; set; } = Currency.EUR;
 
     public ICollection<Sale> Sales { get; init; } = [];
     public ICollection<Expense> Expenses { get; init; } = [];

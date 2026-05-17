@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MySalesTracker.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using MySalesTracker.Infrastructure.Persistence;
 namespace MySalesTracker.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260516221949_AddCurrencyColumn")]
+    partial class AddCurrencyColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -63,11 +66,6 @@ namespace MySalesTracker.Infrastructure.Migrations
                     b.Property<decimal?>("StartingPettyCash")
                         .HasColumnType("decimal(8,2)");
 
-                    b.Property<int>("StartingPettyCashCurrency")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
                     b.HasKey("EventDayId");
 
                     b.HasIndex("EventId");
@@ -87,9 +85,7 @@ namespace MySalesTracker.Infrastructure.Migrations
                         .HasColumnType("decimal(6,2)");
 
                     b.Property<int>("Currency")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
+                        .HasColumnType("int");
 
                     b.Property<int>("EventDayId")
                         .HasColumnType("int");
@@ -121,9 +117,7 @@ namespace MySalesTracker.Infrastructure.Migrations
                         .HasColumnType("decimal(6,2)");
 
                     b.Property<int>("Currency")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
+                        .HasColumnType("int");
 
                     b.Property<int>("EventDayId")
                         .HasColumnType("int");
@@ -147,9 +141,7 @@ namespace MySalesTracker.Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PriceRuleId"));
 
                     b.Property<int>("Currency")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
+                        .HasColumnType("int");
 
                     b.Property<DateOnly>("EffectiveFrom")
                         .HasColumnType("date");
@@ -214,9 +206,7 @@ namespace MySalesTracker.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Currency")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
+                        .HasColumnType("int");
 
                     b.Property<decimal>("DiscountValue")
                         .HasColumnType("decimal(6,2)");

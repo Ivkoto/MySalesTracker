@@ -4,6 +4,7 @@ namespace MySalesTracker.Domain.Models;
 
 public sealed class PaymentSummary
 {
+    public required Currency Currency { get; init; }
     public required Dictionary<PaymentMethod, decimal> Payments { get; init; }
     public required Dictionary<Brand, decimal> BrandSalesTotals { get; init; }
     public required decimal TotalPayments { get; init; }

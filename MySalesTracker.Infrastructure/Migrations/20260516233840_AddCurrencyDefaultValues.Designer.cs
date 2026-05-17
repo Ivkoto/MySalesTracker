@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MySalesTracker.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using MySalesTracker.Infrastructure.Persistence;
 namespace MySalesTracker.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260516233840_AddCurrencyDefaultValues")]
+    partial class AddCurrencyDefaultValues
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -62,11 +65,6 @@ namespace MySalesTracker.Infrastructure.Migrations
 
                     b.Property<decimal?>("StartingPettyCash")
                         .HasColumnType("decimal(8,2)");
-
-                    b.Property<int>("StartingPettyCashCurrency")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
 
                     b.HasKey("EventDayId");
 

@@ -81,7 +81,7 @@ else
                                             @foreach (var ev in summaries)
                                             {
                                                 var value = row.ValueSelector(ev);
-                                                <td class="text-end">@(row.IsCurrency ? FormatCurrency(value) : FormatNumber(value))</td>
+                                                <td class="text-end">@(row.IsCurrency ? FormatCurrency(value, ev.Currency) : FormatNumber(value))</td>
                                             }
                                         </tr>
                                     }
@@ -224,7 +224,7 @@ else
         }
     }
 
-    string FormatCurrency(decimal value) => value.ToString("0.00 лв", Bg);
+    string FormatCurrency(decimal value, Currency currency) => $"{value.ToString("0.00", Bg)} {currency.GetDisplayName()}";
     string FormatNumber(decimal value) => value.ToString("0.##", Bg);
 
     IEnumerable<ComparisonRow> BuildRows()

@@ -1,3 +1,4 @@
+using MySalesTracker.Domain.Enums;
 using MySalesTracker.Domain.Models;
 
 namespace MySalesTracker.Application.DTOs;
@@ -20,5 +21,7 @@ public sealed class DayStatistics
     public required int EventDayId { get; init; }
     public required DateOnly Date { get; init; }
     public decimal? StartingPettyCash { get; init; }
+    public required Currency StartingPettyCashCurrency { get; init; }
+    public required Currency Currency { get; init; }
     public required PaymentSummary PaymentSummary { get; init; }
 }

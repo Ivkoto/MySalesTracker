@@ -263,6 +263,8 @@ else if (eventSummary is not null)
 
     static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
 
+    Currency DisplayCurrency => eventSummary?.Currency ?? Currency.EUR;
+
     IEnumerable<DayStatistics> SelectedDaySummaries =>
         selectedDayIds.Select(id => dayCache.TryGetValue(id, out var ds) ? ds : null)
                       .OfType<DayStatistics>();
@@ -522,7 +524,7 @@ else if (eventSummary is not null)
         return $"{date:dd.MM} {dayOfWeek}";
     }
 
-    string FormatCurrency(decimal value) => value.ToString("0.00 лв", Bg);
+    string FormatCurrency(decimal value) => $"{value.ToString("0.00", Bg)} {DisplayCurrency.GetDisplayName()}";
 
     decimal GetPayment(PaymentSummary summary, PaymentMethod method)
         => summary.Payments.TryGetValue(method, out var value) ? value : 0m;
