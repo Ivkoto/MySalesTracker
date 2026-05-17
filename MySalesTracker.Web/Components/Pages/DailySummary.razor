@@ -47,7 +47,7 @@ else
                                @bind="pettyCashText" @bind:event="oninput"
                                @onblur="OnPettyCashChanged"
                                @onfocus="@(() => SelectAllText(pettyCashInput))"
-                               placeholder="0,00 лв" />
+                               placeholder="@GetZeroAmountPlaceholder()" />
                     </td>
                 </tr>
             </tbody>
@@ -59,7 +59,7 @@ else
             <thead class="table-warning">
                 <tr>
                     <th class="px-3">Метод на плащане</th>
-                    <th class="px-3 text-end">Сума (лв)</th>
+                    <th class="px-3 text-end">@GetAmountHeader()</th>
                 </tr>
             </thead>
             <tbody>
@@ -101,7 +101,7 @@ else
                 </tr>
                 <tr class="table-light">
                     <td class="px-3 fw-bold">СУМА</td>
-                    <td class="px-3 fw-bold text-end">@totalPayments.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 fw-bold text-end">@FormatCurrency(totalPayments)</td>
                 </tr>
             </tbody>
         </table>
@@ -116,7 +116,7 @@ else
             <thead class="table-info">
                 <tr>
                     <th class="px-3">Продажби по Бранд</th>
-                    <th class="px-3 text-end">Сума (лв)</th>
+                    <th class="px-3 text-end">@GetAmountHeader()</th>
                 </tr>
             </thead>
             <tbody>
@@ -126,31 +126,31 @@ else
                     {
                         <tr>
                             <td class="px-3">Общо ТОТЕМ</td>
-                            <td class="px-3 text-end">@totemTotal.ToString("0.00", Bg) лв</td>
+                            <td class="px-3 text-end">@FormatCurrency(totemTotal)</td>
                         </tr>
                     }
                     @if (summary.BrandSalesTotals.TryGetValue(Brand.Ceramics, out var ceramicsTotal))
                     {
                         <tr>
                             <td class="px-3">Общо Керамика</td>
-                            <td class="px-3 text-end">@ceramicsTotal.ToString("0.00", Bg) лв</td>
+                            <td class="px-3 text-end">@FormatCurrency(ceramicsTotal)</td>
                         </tr>
                     }
                     @if (summary.BrandSalesTotals.TryGetValue(Brand.Candles, out var candlesTotal))
                     {
                         <tr>
                             <td class="px-3">Общо Гора</td>
-                            <td class="px-3 text-end">@candlesTotal.ToString("0.00", Bg) лв</td>
+                            <td class="px-3 text-end">@FormatCurrency(candlesTotal)</td>
                         </tr>
                     }
                 }
                 <tr class="table-light">
                     <td class="px-3 fw-bold">ТОТАЛ</td>
-                    <td class="px-3 fw-bold text-end">@totalSales.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 fw-bold text-end">@FormatCurrency(totalSales)</td>
                 </tr>
                 <tr class="@(difference >= 0 ? "table-success" : "table-danger")">
                     <td class="px-3 fw-bold">разлика</td>
-                    <td class="px-3 fw-bold text-end">@difference.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 fw-bold text-end">@FormatCurrency(difference)</td>
                 </tr>
             </tbody>
         </table>        
@@ -186,6 +186,8 @@ else
     ElementReference pettyCashInput;
 
     static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+
+    Currency DisplayCurrency => summary?.Currency ?? Currency.EUR;
 
     protected override async Task OnInitializedAsync()
     {
@@ -270,6 +272,12 @@ else
 
         return true;
     }
+
+    string FormatCurrency(decimal value) => $"{value.ToString("0.00", Bg)} {DisplayCurrency.GetDisplayName()}";
+
+    string GetAmountHeader() => $"Сума ({DisplayCurrency.GetDisplayName()})";
+
+    string GetZeroAmountPlaceholder() => $"0,00 {DisplayCurrency.GetDisplayName()}";
 
     async Task SavePayments()
     {

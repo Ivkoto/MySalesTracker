@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MySalesTracker.Application.DTOs;
+using MySalesTracker.Application.Helpers;
 using MySalesTracker.Application.Interfaces;
 using MySalesTracker.Domain.Entities;
 using MySalesTracker.Domain.Enums;
@@ -77,6 +78,7 @@ public sealed class PaymentService(
         {
             var payments = await paymentRepository.GetPaymentsByEventDayAsync(eventDayId, ct);
             var sales = await saleRepository.GetSalesByEventDay(eventDayId, ct);
+            var currency = CurrencyResolver.Resolve(payments.Select(p => p.Currency).Concat(sales.Select(s => s.Currency)));
 
             var brandSummaries = SalesCalculations.GroupSalesByBrand(sales);
             var paymentsByMethod = PaymentCalculations.GroupPaymentsByMethod(payments);
@@ -91,6 +93,7 @@ public sealed class PaymentService(
 
             var summary = new PaymentSummary
             {
+                Currency = currency,
                 Payments = paymentsByMethod,
                 BrandSalesTotals = brandSummaries.ToDictionary(b => b.Brand, b => b.NetTotal),
                 TotalPayments = totalPayments,

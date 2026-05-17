@@ -48,6 +48,26 @@ public class AppDbContext : DbContext
             .Property(p => p.Brand)
             .HasConversion(brandToString)
             .HasMaxLength(50);
+
+        b.Entity<Sale>()
+            .Property(s => s.Currency)
+            .HasDefaultValue(Currency.EUR);
+        
+        b.Entity<PriceRule>()
+            .Property(pr => pr.Currency)
+            .HasDefaultValue(Currency.EUR);
+        
+        b.Entity<Payment>()
+            .Property(p => p.Currency)
+            .HasDefaultValue(Currency.EUR);
+
+        b.Entity<EventDay>()
+            .Property(e => e.StartingPettyCashCurrency)
+            .HasDefaultValue(Currency.EUR);
+        
+        b.Entity<Expense>()
+            .Property(e => e.Currency)
+            .HasDefaultValue(Currency.EUR);
     }
 
 }

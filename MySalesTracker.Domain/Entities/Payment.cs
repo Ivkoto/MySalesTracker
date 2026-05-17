@@ -18,4 +18,6 @@ public sealed class Payment
     //TODO: Scale up the precision to 8,2 or 10,2 since now the max amount could be 9999.99
     [Column(TypeName = "decimal(6,2)")]
     public decimal Amount { get; set; }
+
+    public Currency Currency {get; set; } = Currency.EUR;
 }

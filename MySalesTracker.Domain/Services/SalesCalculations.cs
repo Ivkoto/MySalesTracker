@@ -25,7 +25,7 @@ public static class SalesCalculations
     /// <param name="sales">Collection of sales to summarize.</param>
     /// <returns>List of brand summaries with aggregated totals.</returns>
     public static List<BrandSalesSummary> GroupSalesByBrand(IEnumerable<Sale> sales)
-        => sales.GroupBy(s => s.Product.Brand).Select(CreateBrandSummary).ToList();
+        => [.. sales.GroupBy(s => s.Product.Brand).Select(CreateBrandSummary)];
 
     /// <summary>
     /// Creates a brand summary from a grouped collection of sales.
@@ -34,11 +34,12 @@ public static class SalesCalculations
         => new()
         {
             Brand = brandGroup.Key,
+            Currency = brandGroup.First().Currency,
             TotalPrice = brandGroup.Sum(s => s.Price),
             TotalDiscount = brandGroup.Sum(s => s.DiscountValue),
             TotalQuantityUnits = brandGroup.Sum(s => s.QuantityUnits),
             SalesCount = brandGroup.Count(),
-            Sales = brandGroup.OrderByDescending(s => s.SaleId).ToList()
+            Sales = [.. brandGroup.OrderByDescending(s => s.SaleId)]
         };
 
     /// <summary>

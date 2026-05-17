@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using MySalesTracker.Domain.Enums;
 
 namespace MySalesTracker.Domain.Entities;
 
@@ -22,6 +23,8 @@ public sealed class Sale
 
     [Column(TypeName = "decimal(6,2)")]
     public decimal Price { get; init; }
+
+    public Currency Currency {get; init; } = Currency.EUR;
 
     public int QuantityUnits { get; init; }
 

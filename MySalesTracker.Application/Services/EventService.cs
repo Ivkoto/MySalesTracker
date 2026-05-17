@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using MySalesTracker.Application.DTOs;
+using MySalesTracker.Application.Helpers;
 using MySalesTracker.Application.Interfaces;
 using MySalesTracker.Domain.Entities;
 using MySalesTracker.Domain.Enums;
@@ -333,6 +334,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     {
         var allSales = evt.Days.SelectMany(d => d.Sales).ToList();
         var allPayments = evt.Days.SelectMany(d => d.Payments).ToList();
+        var currency = CurrencyResolver.Resolve(allSales.Select(s => s.Currency).Concat(allPayments.Select(p => p.Currency)));
 
         // Calculate counts by brand (only TOTEM and Candles)
         var totemSales = allSales.Where(s => s.Product.Brand == Brand.Totem).ToList();
@@ -385,6 +387,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
             EventId = evt.EventId,
             StartDate = evt.StartDate,
             EndDate = evt.EndDate,
+            Currency = currency,
             TotemCount = totemCount,
             TotemProductsCount = totemProductsCount,
             TotemRevenue = totemRevenue,
@@ -404,6 +407,13 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     {
         var brandSummaries = SalesCalculations.GroupSalesByBrand(day.Sales);
         var paymentsByMethod = PaymentCalculations.GroupPaymentsByMethod(day.Payments);
+        var pettyCashCurrencies = day.StartingPettyCash.HasValue
+            ? (IEnumerable<Currency>)[day.StartingPettyCashCurrency]
+            : [];
+        var currency = CurrencyResolver.Resolve(
+            day.Sales.Select(s => s.Currency)
+                .Concat(day.Payments.Select(p => p.Currency))
+                .Concat(pettyCashCurrencies));
 
         var totalPayments = PaymentCalculations.CalculateTotalPayments(day.Payments);
         var totalSales = SalesCalculations.CalculateNetRevenue(day.Sales);
@@ -411,6 +421,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
 
         var paymentSummary = new PaymentSummary
         {
+            Currency = currency,
             Payments = paymentsByMethod,
             BrandSalesTotals = brandSummaries.ToDictionary(b => b.Brand, b => b.NetTotal),
             TotalPayments = totalPayments,
@@ -423,6 +434,8 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
             EventDayId = day.EventDayId,
             Date = day.Date,
             StartingPettyCash = day.StartingPettyCash,
+            StartingPettyCashCurrency = day.StartingPettyCashCurrency,
+            Currency = currency,
             PaymentSummary = paymentSummary
         };
     }

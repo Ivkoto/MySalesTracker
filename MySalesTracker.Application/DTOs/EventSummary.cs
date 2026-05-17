@@ -1,3 +1,5 @@
+using MySalesTracker.Domain.Enums;
+
 namespace MySalesTracker.Application.DTOs;
 
 /// <summary>
@@ -24,6 +26,11 @@ public sealed class EventSummary
     /// The end date of the event.
     /// </summary>
     public required DateOnly EndDate { get; init; }
+
+    /// <summary>
+    /// Shared currency for all monetary totals in this summary.
+    /// </summary>
+    public required Currency Currency { get; init; }
 
 
     // Product counts (only for TOTEM and Гора)
@@ -70,7 +77,6 @@ public sealed class EventSummary
     /// Grand total revenue across all brands (price - discount) for all event days.
     /// </summary>
     public decimal TotalRevenue { get; init; }
-
 
     // Payments by method
     

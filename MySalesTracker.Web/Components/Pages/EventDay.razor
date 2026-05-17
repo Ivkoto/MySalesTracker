@@ -111,8 +111,8 @@ else
                   <td class="px-3">@TimeZoneInfo.ConvertTimeFromUtc(s.CreatedUtc, SofiaTimeZone).ToString("HH:mm", Bg)</td>
                   <td class="px-3">@s.Product.Name</td>
                   <td class="px-3">@s.QuantityUnits</td>
-                  <td class="px-3">@s.Price.ToString("0.00")</td>
-                  <td class="px-3" style="color: @(s.DiscountValue > 0 ? "inherit" : "lightgray")">@s.DiscountValue.ToString("0.00")</td>
+                                    <td class="px-3">@FormatCurrency(s.Price, s.Currency)</td>
+                                    <td class="px-3" style="color: @(s.DiscountValue > 0 ? "inherit" : "lightgray")">@FormatCurrency(s.DiscountValue, s.Currency)</td>
                   <td class="px-3 text-end">
                           <div class="btn-group" role="group">
                               <button class="btn btn-outline-primary btn-sm" @onclick="() => EditSale(s.SaleId)">Edit</button>
@@ -146,8 +146,8 @@ else
                       <td class="px-3">@TimeZoneInfo.ConvertTimeFromUtc(s.CreatedUtc, SofiaTimeZone).ToString("HH:mm", Bg)</td>
                       <td class="px-3">@s.Product.Name</td>
                       <td class="px-3">@s.QuantityUnits</td>
-                      <td class="px-3">@s.Price.ToString("0.00")</td>
-                      <td class="px-3" style="color: @(s.DiscountValue > 0 ? "inherit" : "lightgray")">@s.DiscountValue.ToString("0.00")</td>
+                      <td class="px-3">@FormatCurrency(s.Price, s.Currency)</td>
+                      <td class="px-3" style="color: @(s.DiscountValue > 0 ? "inherit" : "lightgray")">@FormatCurrency(s.DiscountValue, s.Currency)</td>
                       @* <td class="px-3">@s.Notes</td> *@
                       <td class="px-3 text-end">
                           <div class="btn-group" role="group">
@@ -162,8 +162,8 @@ else
               <tr>
                   <td class="px-3 fw-bold" colspan="2">Общо @summary.Brand.GetDisplayName():</td>
                   <td class="px-3 fw-bold">@summary.TotalQuantityUnits.ToString("0")</td>
-                  <td class="px-3 fw-bold">@summary.NetTotal.ToString("0.00")</td>
-                  <td class="px-3 fw-bold">@summary.TotalDiscount.ToString("0.00")</td>
+                  <td class="px-3 fw-bold">@FormatCurrency(summary.NetTotal, summary.Currency)</td>
+                  <td class="px-3 fw-bold">@FormatCurrency(summary.TotalDiscount, summary.Currency)</td>
               </tr>
           </tfoot>
       </table>
@@ -405,6 +405,9 @@ else
     {
         validationMessage = null;
     }
+
+    string FormatCurrency(decimal value, Currency currency)
+        => $"{value.ToString("0.00", Bg)} {currency.GetDisplayName()}";
 
 
     // TODO: check the usage of this one - too many calls can cause the pool full issue with the database.

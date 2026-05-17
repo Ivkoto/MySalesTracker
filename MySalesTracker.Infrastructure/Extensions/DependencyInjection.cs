@@ -13,13 +13,13 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        var aspireConn = configuration.GetConnectionString("sql2017");
+        var aspireConn = configuration.GetConnectionString("MySalesTracker");
         var defaultConn = configuration.GetConnectionString("DatabaseConnection");
         var connString = !string.IsNullOrEmpty(aspireConn) ? aspireConn : defaultConn;
 
         if (string.IsNullOrWhiteSpace(connString))
         {
-            throw new InvalidOperationException("No valid database connection string configured. Configure either 'sql2017' or 'DatabaseConnection' in the connectionStrings section.");
+            throw new InvalidOperationException("No valid database connection string configured. Configure either 'MySalesTracker' or 'DatabaseConnection' in the connectionStrings section.");
         }
 
         services.AddDbContextFactory<AppDbContext>(opt => opt.UseSqlServer(connString));

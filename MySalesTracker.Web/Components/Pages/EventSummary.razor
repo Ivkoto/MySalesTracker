@@ -53,19 +53,19 @@ else if (summary is not null)
                 }
                 <tr>
                     <td class="px-3">Оборот Тотем</td>
-                    <td class="px-3 text-end">@summary.TotemRevenue.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 text-end">@FormatCurrency(summary.TotemRevenue)</td>
                 </tr>
                 <tr>
                     <td class="px-3">Оборот Керамика</td>
-                    <td class="px-3 text-end">@summary.CeramicsRevenue.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 text-end">@FormatCurrency(summary.CeramicsRevenue)</td>
                 </tr>
                 <tr>
                     <td class="px-3">Оборот Гора</td>
-                    <td class="px-3 text-end">@summary.GoraRevenue.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 text-end">@FormatCurrency(summary.GoraRevenue)</td>
                 </tr>
                 <tr class="table-light">
                     <td class="px-3 fw-bold">Оборот Общо</td>
-                    <td class="px-3 fw-bold text-end">@summary.TotalRevenue.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 fw-bold text-end">@FormatCurrency(summary.TotalRevenue)</td>
                 </tr>
             </tbody>
         </table>
@@ -74,33 +74,33 @@ else if (summary is not null)
             <thead class="table-info">
                 <tr>
                     <th class="px-3">Налични - записани</th>
-                    <th class="px-3 text-end">Сума (лв)</th>
+                    <th class="px-3 text-end">@GetAmountHeader()</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td class="px-3">Налични кеш оборот</td>
-                    <td class="px-3 text-end">@summary.CashTotal.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 text-end">@FormatCurrency(summary.CashTotal)</td>
                 </tr>
                 <tr>
                     <td class="px-3">Налични карта оборот</td>
-                    <td class="px-3 text-end">@summary.CardTotal.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 text-end">@FormatCurrency(summary.CardTotal)</td>
                 </tr>
                 <tr>
                     <td class="px-3">Налични Revolut Лидия</td>
-                    <td class="px-3 text-end">@summary.RevolutLidiaTotal.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 text-end">@FormatCurrency(summary.RevolutLidiaTotal)</td>
                 </tr>
                 <tr>
                     <td class="px-3">Налични Revolut Ивайло</td>
-                    <td class="px-3 text-end">@summary.RevolutIvayloTotal.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 text-end">@FormatCurrency(summary.RevolutIvayloTotal)</td>
                 </tr>
                 <tr class="table-light">
                     <td class="px-3 fw-bold">СУМА</td>
-                    <td class="px-3 fw-bold text-end">@totalPayments.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 fw-bold text-end">@FormatCurrency(totalPayments)</td>
                 </tr>
                 <tr class="@(difference >= 0 ? "table-success" : "table-danger")">
                     <td class="px-3 fw-bold">разлика</td>
-                    <td class="px-3 fw-bold text-end">@difference.ToString("0.00", Bg) лв</td>
+                    <td class="px-3 fw-bold text-end">@FormatCurrency(difference)</td>
                 </tr>
             </tbody>
         </table>
@@ -117,6 +117,8 @@ else if (summary is not null)
     bool isLoading = true;
 
     static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+
+    Currency DisplayCurrency => summary?.Currency ?? Currency.EUR;
 
     protected override async Task OnInitializedAsync()
     {
@@ -138,5 +140,9 @@ else if (summary is not null)
             difference = totalPayments - summary.TotalRevenue;
         }
     }
+
+    string FormatCurrency(decimal value) => $"{value.ToString("0.00", Bg)} {DisplayCurrency.GetDisplayName()}";
+
+    string GetAmountHeader() => $"Сума ({DisplayCurrency.GetDisplayName()})";
 }
 

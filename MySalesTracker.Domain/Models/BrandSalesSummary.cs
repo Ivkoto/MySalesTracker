@@ -6,6 +6,7 @@ namespace MySalesTracker.Domain.Models;
 public class BrandSalesSummary
 {
     public Brand Brand { get; set; }
+    public required Currency Currency { get; set; }
     public List<Sale> Sales { get; set; } = [];
     public decimal TotalPrice { get; set; }
     public decimal TotalDiscount { get; set; }
