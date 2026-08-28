@@ -94,7 +94,14 @@
   bool CanSubmit => showCreateForm && !string.IsNullOrWhiteSpace(name) && start <= end;
 
   protected override async Task OnInitializedAsync()
-      => events = await EventSvc.GetAllEventsAsync();
+  {
+    events = await EventSvc.GetAllEventsAsync();
+    expandedEventId = events
+      .Where(e => e.StartDate <= today && today <= e.EndDate.AddDays(1))
+      .OrderByDescending(e => e.EndDate)
+      .Select(e => (int?)e.EventId)
+      .FirstOrDefault();
+  }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
