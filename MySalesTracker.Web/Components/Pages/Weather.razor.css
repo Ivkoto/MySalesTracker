@@ -259,7 +259,6 @@
     scroll-snap-type: inline proximity;
     scrollbar-width: thin;
     overscroll-behavior-inline: contain;
-    touch-action: pan-x;
     -webkit-overflow-scrolling: touch;
 }
 
