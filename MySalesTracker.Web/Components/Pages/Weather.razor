@@ -4,54 +4,160 @@
 @inject WeatherState State
 @inject IWeatherService WeatherSvc
 
-<h2>шИ вали ли ⛈️🌪️👀 🥃🥴</h2>
+<PageTitle>Прогноза</PageTitle>
 
-<div class="mb-3 d-flex gap-2 flex-wrap align-items-center">
-    <input class="form-control" style="width: 18rem" placeholder="City (e.g. Sofia)" @bind="city" />
-    <select class="form-select" style="width: 8rem" @bind="displayDays">
-        @for (var d = 1; d <= MaxForecastDays; d++)
+<header class="weather-page-header">
+    <div>
+        <h2>Дали вали</h2>
+        @if (summary is not null)
         {
-       <option value="@d">@d @(d == 1 ? "day" : "days")</option>
+            <div class="weather-location">
+                <span class="bi bi-geo-alt" aria-hidden="true"></span>
+                <span>@summary.Name</span>
+            </div>
         }
-  </select>
-    <button class="btn btn-primary" @onclick="Load">Get forecast</button>
-</div>
+    </div>
+</header>
+
+<form class="forecast-controls" @onsubmit="Load" @onsubmit:preventDefault>
+    <label class="control-field city-control">
+        <span class="visually-hidden">Град</span>
+        <span class="bi bi-geo-alt control-icon" aria-hidden="true"></span>
+        <input class="form-control"
+               autocomplete="address-level2"
+               aria-label="Град"
+               placeholder="Град, напр. София"
+               @bind="city" />
+    </label>
+
+    <label class="control-field">
+        <span class="visually-hidden">Брой дни</span>
+        <select class="form-select" aria-label="Брой дни" @bind="displayDays">
+            @for (var d = 1; d <= MaxForecastDays; d++)
+            {
+                <option value="@d">@d @(d == 1 ? "ден" : "дни")</option>
+            }
+        </select>
+    </label>
+
+    <button type="submit"
+            class="btn btn-primary forecast-submit"
+            aria-label="Покажи прогноза"
+            title="Покажи прогноза"
+            disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        }
+        else
+        {
+            <span class="bi bi-search" aria-hidden="true"></span>
+        }
+        <span class="forecast-button-label">@(isLoading ? "Зареждане" : "Покажи")</span>
+    </button>
+</form>
 
 @if (error is not null)
 {
-    <div class="alert alert-danger">@error</div>
+    <div class="alert alert-danger weather-alert" role="alert">@error</div>
 }
 
-@if (summary is not null)
+@if (summary is not null && SelectedDay is { } selectedDay)
 {
-    <div class="card p-3">
-        <div><b>Location:</b> @summary.Name (@summary.Lat.ToString("0.###", CultureInfo.InvariantCulture), @summary.Lon.ToString("0.###", CultureInfo.InvariantCulture))</div>
-        <div class="mt-2">
-            <b>Next @displayDays @(displayDays == 1 ? "day" : "days"):</b>
-             @foreach (var day in summary.Days)
-             {
-                 <div class="day-block mt-3">
-                     <div class="day-title">@day.DayLabel</div>
-                     <div class="hour-grid mt-2">
-                        @foreach (var hour in day.Hours)
-                        {
-                            var bg = WeatherCalculations.GetRainBackgroundColor(hour.Mm);
-                            var edge = WeatherCalculations.GetRainBorderColor(hour.Mm);
-                            var textColor = WeatherCalculations.GetRainTextColor(hour.Mm);
-                            <div class="hour-card" style="background-color: @bg; border-color:@edge; color:@textColor">
-                                 <div class="hour-time">@hour.TimeLabel</div>
-                                 <div class="hour-values">
-                                     <span class="me-2">@hour.Temp.ToString("0.#", CultureInfo.InvariantCulture)&deg;C</span>
-                                     <span>Wind @hour.Wind.ToString("0.#", CultureInfo.InvariantCulture) km/h</span>
-                                 </div>
-                                 <div class="hour-rain">Chance @hour.Prob% (@hour.Mm.ToString("0.0", CultureInfo.InvariantCulture) mm)</div>
-                             </div>
-                         }
-                     </div>
-                 </div>
-               }
+    <section class="forecast-panel" aria-labelledby="selected-day-title">
+        <div class="day-tabs" role="tablist" aria-label="Дни от прогнозата">
+            @for (var index = 0; index < summary.Days.Count; index++)
+            {
+                var tabIndex = index;
+                var day = summary.Days[index];
+                <button type="button"
+                        role="tab"
+                        aria-selected="@(selectedDayIndex == index)"
+                        class="day-tab @(selectedDayIndex == index ? "day-tab-active" : null)"
+                        @onclick="() => SelectDay(tabIndex)">
+                    <span class="day-tab-name">@GetDayTabName(day.Date)</span>
+                    <span class="day-tab-date">@FormatDate(day.Date)</span>
+                </button>
+            }
         </div>
-    </div>
+
+        <div class="day-overview">
+            <h3 id="selected-day-title">@FormatDayHeading(selectedDay.Date)</h3>
+
+            <div class="weather-metrics">
+                <div class="weather-metric temperature-metric">
+                    <span class="bi bi-thermometer-half metric-icon" aria-hidden="true"></span>
+                    <div>
+                        <span class="metric-label">Температура</span>
+                        <strong>@FormatTemperature(selectedDay.MinTemperature) / @FormatTemperature(selectedDay.MaxTemperature)</strong>
+                    </div>
+                </div>
+
+                <div class="weather-metric probability-metric">
+                    <span class="bi bi-umbrella metric-icon" aria-hidden="true"></span>
+                    <div>
+                        <span class="metric-label">Дъжд</span>
+                        <strong>@selectedDay.MaxRainProbability%</strong>
+                    </div>
+                </div>
+
+                <div class="weather-metric precipitation-metric">
+                    <span class="bi bi-droplet metric-icon" aria-hidden="true"></span>
+                    <div>
+                        <span class="metric-label">Валежи</span>
+                        <strong>@FormatNumber(selectedDay.TotalPrecipitation) mm</strong>
+                    </div>
+                </div>
+
+                <div class="weather-metric wind-metric">
+                    <span class="bi bi-wind metric-icon" aria-hidden="true"></span>
+                    <div>
+                        <span class="metric-label">Вятър</span>
+                        <strong>@FormatNumber(selectedDay.MaxWindSpeed) km/h</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hourly-section">
+            <div class="hourly-heading">
+                <h4>По часове</h4>
+                <span class="bi bi-arrow-left-right" aria-hidden="true"></span>
+            </div>
+
+            <div class="hourly-scroller"
+                 tabindex="0"
+                 aria-label="Почасова прогноза за @FormatDayHeading(selectedDay.Date)">
+                <div class="hourly-track">
+                    @foreach (var hour in selectedDay.Hours)
+                    {
+                        var rainAccent = WeatherCalculations.GetRainBorderColor(hour.Mm);
+                        var rainProbability = Math.Clamp(hour.Prob, 0, 100);
+
+                        <article class="hour-item">
+                            <time class="hour-time"
+                                  datetime="@hour.Time.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture)">
+                                @hour.Time.ToString("HH:mm", CultureInfo.InvariantCulture)
+                            </time>
+                            <strong class="hour-temperature">@FormatTemperature(hour.Temp)</strong>
+                            <div class="hour-rain">
+                                <span class="bi bi-droplet-fill" aria-hidden="true"></span>
+                                <span>@rainProbability%</span>
+                            </div>
+                            <span class="hour-precipitation">@FormatNumber(hour.Mm) mm</span>
+                            <div class="hour-wind">
+                                <span class="bi bi-wind" aria-hidden="true"></span>
+                                <span>@FormatNumber(hour.Wind)</span>
+                            </div>
+                            <div class="rain-probability-bar" aria-hidden="true">
+                                <span style="width: @(rainProbability)%; background-color: @rainAccent"></span>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
 }
 
 @code {
@@ -61,12 +167,28 @@
     string city = "Sofia";
     string? error;
     int displayDays = 3;
+    int selectedDayIndex;
+    bool isLoading;
 
-    record HourEntry(string TimeLabel, double Temp, double Wind, int Prob, double Mm);
-    record DayForecast(string DayLabel, List<HourEntry> Hours);
-    record Summary(string Name, double Lat, double Lon, List<DayForecast> Days);
+    sealed record HourEntry(DateTime Time, double Temp, double Wind, int Prob, double Mm);
+
+    sealed record DayForecast(DateOnly Date, List<HourEntry> Hours)
+    {
+        public double MinTemperature => Hours.Count == 0 ? 0 : Hours.Min(hour => hour.Temp);
+        public double MaxTemperature => Hours.Count == 0 ? 0 : Hours.Max(hour => hour.Temp);
+        public int MaxRainProbability => Hours.Count == 0 ? 0 : Hours.Max(hour => hour.Prob);
+        public double TotalPrecipitation => Hours.Sum(hour => hour.Mm);
+        public double MaxWindSpeed => Hours.Count == 0 ? 0 : Hours.Max(hour => hour.Wind);
+    }
+
+    sealed record Summary(string Name, double Lat, double Lon, List<DayForecast> Days);
 
     Summary? summary;
+
+    DayForecast? SelectedDay
+        => summary is null || selectedDayIndex < 0 || selectedDayIndex >= summary.Days.Count
+            ? null
+            : summary.Days[selectedDayIndex];
 
     protected override void OnInitialized()
     {
@@ -81,8 +203,13 @@
                 State.LastSummary.Lon,
                 State.LastSummary.Days
                     .Select(day => new DayForecast(
-                        day.DayLabel,   
-                        day.Hours.Select(hour => new HourEntry(hour.TimeLabel, hour.Temp, hour.Wind, hour.Prob, hour.Mm)).ToList()))
+                        day.Date,
+                        day.Hours.Select(hour => new HourEntry(
+                            hour.Time,
+                            hour.Temp,
+                            hour.Wind,
+                            hour.Prob,
+                            hour.Mm)).ToList()))
                     .ToList());
         }
     }
@@ -90,8 +217,6 @@
     async Task Load()
     {
         error = null;
-        summary = null;
-
         city = city.Trim();
 
         if (string.IsNullOrWhiteSpace(city))
@@ -104,69 +229,116 @@
         State.City = city;
         State.DisplayDays = displayDays;
 
-        var geo = await WeatherSvc.FetchGeocode(city);
-
-        if (geo is null)
+        isLoading = true;
+        try
         {
-            error = "Градът не е намерен.";
-            return;
+            var geo = await WeatherSvc.FetchGeocode(city);
+
+            if (geo is null)
+            {
+                error = "Градът не е намерен.";
+                return;
+            }
+
+            var (lat, lon, name) = geo.Value;
+            var forecast = await WeatherSvc.GetForecast(lat, lon, displayDays);
+
+            if (forecast?.Hours is null || forecast.Hours.Count == 0)
+            {
+                error = "Няма данни за метеорологичната прогноза.";
+                return;
+            }
+
+            var maxHours = Math.Min(displayDays * HoursPerDay, forecast.Hours.Count);
+            var parsedHours = new List<(DateTime Date, HourEntry Hour)>();
+
+            for (var i = 0; i < maxHours; i++)
+            {
+                var hour = forecast.Hours[i];
+                parsedHours.Add((
+                    hour.Time.Date,
+                    new HourEntry(
+                        hour.Time,
+                        hour.Temperature,
+                        hour.WindSpeed,
+                        hour.PrecipitationProbability,
+                        hour.Precipitation)));
+            }
+
+            if (parsedHours.Count == 0)
+            {
+                error = "Няма налични метеорологични данни.";
+                return;
+            }
+
+            var daySummaries = parsedHours
+                .GroupBy(entry => entry.Date)
+                .OrderBy(group => group.Key)
+                .Take(displayDays)
+                .Select(group => new DayForecast(
+                    DateOnly.FromDateTime(group.Key),
+                    group.Select(entry => entry.Hour).ToList()))
+                .ToList();
+
+            if (daySummaries.Count == 0)
+            {
+                error = "Няма налични метеорологични данни.";
+                return;
+            }
+
+            summary = new Summary(name ?? city, lat, lon, daySummaries);
+            selectedDayIndex = 0;
+
+            State.Store(
+                new WeatherState.Summary(
+                    summary.Name,
+                    summary.Lat,
+                    summary.Lon,
+                    daySummaries
+                        .Select(day => new WeatherState.DaySummary(
+                            day.Date,
+                            day.Hours.Select(hour => new WeatherState.HourEntry(
+                                hour.Time,
+                                hour.Temp,
+                                hour.Wind,
+                                hour.Prob,
+                                hour.Mm)).ToList()))
+                        .ToList()));
         }
-
-        var (lat, lon, name) = geo.Value;
-        var forecast = await WeatherSvc.GetForecast(lat, lon, displayDays);
-
-        if (forecast?.Hours is null || forecast.Hours.Count == 0)
+        catch
         {
-            error = "Няма данни за метеорологичната прогноза.";
-            return;
+            error = "Прогнозата не можа да бъде заредена.";
         }
-
-        var maxHours = Math.Min(displayDays * HoursPerDay, forecast.Hours.Count);
-        var parsedHours = new List<(DateTime Date, HourEntry Hour)>();
-
-        for (int i = 0; i < maxHours; i++)
+        finally
         {
-            var hour = forecast.Hours[i];
-            var timeLabel = hour.Time.ToString("HH:mm", CultureInfo.InvariantCulture);
-            parsedHours.Add((hour.Time.Date, new HourEntry(timeLabel, hour.Temperature, hour.WindSpeed, hour.PrecipitationProbability, hour.Precipitation)));
+            isLoading = false;
         }
-
-        if (parsedHours.Count == 0)
-        {
-            error = "Няма налични метеорологични данни.";
-            return;
-        }
-
-        var daySummaries = parsedHours
-            .GroupBy(x => x.Date)
-            .OrderBy(g => g.Key)
-            .Take(displayDays)
-            .Select(group =>
-                {
-                    var dayLabel = group.Key.ToString("dddd, dd MMMM", CultureInfo.InvariantCulture);
-                    return new DayForecast(dayLabel, group.Select(x => x.Hour).ToList());
-                })
-            .ToList();
-
-        if (daySummaries.Count == 0)    
-        {
-            error = "Няма налични метеорологични данни.";
-            return;
-        }
-
-        summary = new Summary(name ?? city, lat, lon, daySummaries);
-
-        State.Store(
-            new WeatherState.Summary(
-                summary.Name,
-                summary.Lat,
-                summary.Lon,
-                daySummaries
-                    .Select(day => new WeatherState.DaySummary(
-                            day.DayLabel,
-                            day.Hours.Select(hour => new WeatherState.HourEntry(hour.TimeLabel, hour.Temp, hour.Wind, hour.Prob, hour.Mm)).ToList()))
-                    .ToList()
-            )
-        );
     }
+
+    void SelectDay(int index)
+    {
+        if (summary is null || index < 0 || index >= summary.Days.Count)
+        {
+            return;
+        }
+
+        selectedDayIndex = index;
+    }
+
+    static string GetDayTabName(DateOnly date)
+        => date.ToDateTime(TimeOnly.MinValue).ToString("ddd", Bg).TrimEnd('.');
+
+    static string FormatDate(DateOnly date)
+        => date.ToString("dd.MM", Bg);
+
+    static string FormatDayHeading(DateOnly date)
+        => date.ToDateTime(TimeOnly.MinValue).ToString("dddd, d MMMM", Bg);
+
+    static string FormatTemperature(double value)
+        => $"{value.ToString("0.#", Bg)}°";
+
+    static string FormatNumber(double value)
+        => value.ToString("0.#", Bg);
+
+    static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
 }
