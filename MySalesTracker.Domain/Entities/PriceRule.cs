@@ -21,11 +21,7 @@ public sealed class PriceRule
 
     public int SortOrder { get; init; }
 
+    public bool IsDefault { get; init; }
+
     public Product Product { get; init; } = null!;
-
-    [Column(TypeName = "date")]
-    public DateOnly EffectiveFrom { get; init; } = DateOnly.FromDateTime(DateTime.UtcNow);
-
-    [Column(TypeName = "date")]
-    public DateOnly? EffectiveTo { get; init; }
 }

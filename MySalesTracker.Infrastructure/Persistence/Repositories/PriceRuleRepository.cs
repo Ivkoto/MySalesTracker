@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using MySalesTracker.Application.Interfaces;
 using MySalesTracker.Domain.Entities;
@@ -7,28 +8,46 @@ internal class PriceRuleRepository(IDbContextFactory<AppDbContext> contextFactor
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory = contextFactory;
 
-    public async Task<List<PriceRule>> GetAllPriceRulesAsync(DateOnly onDate, CancellationToken ct)
-    {
-        await using var context = await _contextFactory.CreateDbContextAsync(ct);
-
-        var result =  await context.PriceRules
-            .Where (r => r.EffectiveFrom <= onDate && (r.EffectiveTo == null || r.EffectiveTo >= onDate))
-            .ToListAsync(ct);
-
-        return result;
-    }
-
-    public async Task<PriceRule?> GetUnitsForProductAsync(int productId, decimal price, DateOnly onDate, CancellationToken ct)
+    public async Task<List<PriceRule>> GetAllPriceRulesAsync(CancellationToken ct)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
 
         return await context.PriceRules
-                .Where(r => r.ProductId == productId
-                    && r.Price == price
-                    && r.EffectiveFrom <= onDate
-                    && (r.EffectiveTo == null || r.EffectiveTo >= onDate))
-                .OrderByDescending(r => r.EffectiveFrom)
-                .ThenBy(r => r.SortOrder)
-                .FirstOrDefaultAsync(ct);
+            .AsNoTracking()
+            .OrderBy(r => r.ProductId)
+            .ThenBy(r => r.SortOrder)
+            .ToListAsync(ct);
+    }
+
+    public async Task<PriceRule?> GetRuleForProductAsync(int productId, decimal price, CancellationToken ct)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(ct);
+
+        return await context.PriceRules
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.ProductId == productId && r.Price == price, ct);
+    }
+
+    public async Task ReplacePriceRulesAsync(
+        int productId,
+        IReadOnlyCollection<PriceRule> priceRules,
+        CancellationToken ct)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(ct);
+        await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
+        var existingRules = await context.PriceRules
+            .Where(r => r.ProductId == productId)
+            .ToListAsync(ct);
+
+        if (existingRules.Count > 0)
+        {
+            context.PriceRules.RemoveRange(existingRules);
+            await context.SaveChangesAsync(ct);
+        }
+
+        context.PriceRules.AddRange(priceRules);
+        await context.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
     }
 }

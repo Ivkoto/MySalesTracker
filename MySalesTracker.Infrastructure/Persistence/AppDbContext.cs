@@ -28,7 +28,13 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder b)
     {
-        b.Entity<PriceRule>().HasIndex(r => new { r.ProductId, r.Price });
+        b.Entity<PriceRule>()
+            .HasIndex(r => new { r.ProductId, r.Price })
+            .IsUnique();
+        b.Entity<PriceRule>()
+            .HasIndex(r => r.ProductId)
+            .IsUnique()
+            .HasFilter("[IsDefault] = 1");
         b.Entity<Sale>().HasIndex(s => s.EventDayId);
 
         // That converter is needed to store Product.Brand as Bulgarian strings in the database

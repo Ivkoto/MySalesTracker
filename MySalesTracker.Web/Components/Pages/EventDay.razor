@@ -49,6 +49,12 @@ else
         {
             <select @bind="price" @bind:after="OnPriceChanged" class="form-select" style="width: 8rem">
                 <option value="">Цена…</option>
+                @if (editingSaleId.HasValue
+                    && price.HasValue
+                    && priceOptions.All(rule => rule.Price != price.Value))
+                {
+                    <option value="@price.Value">@price.Value (записана)</option>
+                }
                 @foreach (var r in priceOptions)
                 {
                     <option value="@r.Price">@r.Price</option>
@@ -191,6 +197,8 @@ else
     int qty = 1;
     string? validationMessage;
     int? editingSaleId;   // Track if editing a sale
+    decimal? editingOriginalPrice;
+    int? editingOriginalQuantityUnits;
     double scrollPositionBeforeEdit = 0;
     bool showSavedFeedback = false;
     bool isSaving = false;
@@ -213,7 +221,7 @@ else
 
         products = await ProductSvc.GetActiveProductsAsync();
 
-        allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync(day.Date);
+        allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync();
 
         await ReloadSalesAsync();
         await EnsureHubConnectionAsync();
@@ -221,6 +229,8 @@ else
 
     async Task OnProductChanged()
     {
+        allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync();
+
         if (selectedProduct?.Brand == Brand.Ceramics)
         {
             priceOptions.Clear();
@@ -233,17 +243,7 @@ else
                 ? new()
                 : allPriceRules.Where(r => r.ProductId == productId).OrderBy(r => r.SortOrder).ToList();
 
-            // TODO: Hard-coded product names and prices are used for setting default values. This creates a tight coupling 
-            // between the UI and business logic, making the code fragile to product name changes in the database.
-            var defaultPrice = (selectedProduct?.Brand, selectedProduct?.Name) switch
-            {
-                (Brand.Totem, "Бандани") => 40.00m,
-                (Brand.Totem, "Ръкавици") => 35.00m,
-                (Brand.Candles, _) => 19.00m,
-                _ => 0m
-            };
-
-            price = priceOptions.FirstOrDefault(r => r.Price == defaultPrice)?.Price 
+            price = priceOptions.FirstOrDefault(r => r.IsDefault)?.Price
                     ?? priceOptions.FirstOrDefault()?.Price;
             priceText = null;
         }
@@ -301,7 +301,34 @@ else
             return;
         }
 
-        var unitsPerSale = await PriceRuleSvc.GetUnitsForProductAsync(productId.Value, price.Value, day.Date);
+        int unitsPerSale;
+        if (editingSaleId.HasValue && price == editingOriginalPrice)
+        {
+            unitsPerSale = editingOriginalQuantityUnits ?? 1;
+        }
+        else if (selectedProduct?.Brand == Brand.Ceramics)
+        {
+            unitsPerSale = 1;
+        }
+        else
+        {
+            var configuredUnits = await PriceRuleSvc.GetUnitsForProductAsync(productId.Value, price.Value);
+            if (!configuredUnits.HasValue)
+            {
+                allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync();
+                priceOptions = allPriceRules
+                    .Where(rule => rule.ProductId == productId.Value)
+                    .OrderBy(rule => rule.SortOrder)
+                    .ToList();
+                price = priceOptions.FirstOrDefault(rule => rule.IsDefault)?.Price
+                    ?? priceOptions.FirstOrDefault()?.Price;
+                validationMessage = "Цените са променени. Избери актуална цена и опитай отново.";
+                return;
+            }
+
+            unitsPerSale = configuredUnits.Value;
+        }
+
         isSaving = true;
         StateHasChanged();
 
@@ -315,23 +342,23 @@ else
                     editingSaleId.Value,
                     day.EventDayId,
                     price.Value,
-                    unitsPerSale.Units,
+                    unitsPerSale,
                     discount,
-                    note,
-                    unitsPerSale.PriceRuleId);
+                    note);
 
                 savedScrollPosition = scrollPositionBeforeEdit;
                 scrollPositionBeforeEdit = 0;
                 editingSaleId = null;
+                editingOriginalPrice = null;
+                editingOriginalQuantityUnits = null;
             }
             else
             {
                 await SaleSvc.CreateSaleAsync(
                     day.EventDayId,
                     productId.Value,
-                    unitsPerSale.PriceRuleId,
                     price.Value,
-                    unitsPerSale.Units,
+                    unitsPerSale,
                     discount,
                     note);
             }
@@ -380,9 +407,9 @@ else
         }
     }
 
-    private async Task OnPriceChanged()
+    private void OnPriceChanged()
     {
-        if (productId is null || day is null) return;
+        if (productId is null) return;
 
         if (selectedProduct?.Brand == Brand.Ceramics)
         {
@@ -391,14 +418,7 @@ else
                 ? parsed
                 : null;
         }
-        else if (price is not null)
-        {
-            var unitsPerSale = await PriceRuleSvc.GetUnitsForProductAsync(productId.Value, price.Value, day.Date);
-        }
-
         ClearValidationMessage();
-
-        StateHasChanged();
     }
 
     void ClearValidationMessage()
@@ -480,9 +500,14 @@ else
 
         editingSaleId = saleId;
         productId = sale.ProductId;
-        
-        //TODO: Uncomment once there is option to change the entire product with the edit. Currently the product stays as it is and only the price could be changed.
-        //await OnProductChanged();
+        editingOriginalPrice = sale.Price;
+        editingOriginalQuantityUnits = sale.QuantityUnits;
+
+        allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync();
+        priceOptions = allPriceRules
+            .Where(rule => rule.ProductId == sale.ProductId)
+            .OrderBy(rule => rule.SortOrder)
+            .ToList();
 
         price = sale.Price;
         priceText = sale.Price.ToString("0.00", Bg);
@@ -510,6 +535,8 @@ else
     private void CancelEdit()
     {
         editingSaleId = null;
+        editingOriginalPrice = null;
+        editingOriginalQuantityUnits = null;
         productId = null;
         price = null;
         priceText = null;

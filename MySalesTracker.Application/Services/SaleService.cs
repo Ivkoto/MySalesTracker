@@ -36,7 +36,6 @@ public sealed class SaleService(ISaleRepository saleRepository, ILogger<SaleServ
     /// </summary>
     /// <param name="eventDayId">The ID of the event day.</param>
     /// <param name="productId">The ID of the product.</param>
-    /// <param name="priceRuleId">The ID of the price rule (optional).</param>
     /// <param name="unitPrice">The unit price of the product.</param>
     /// <param name="quantityUnits">The quantity of units sold.</param>
     /// <param name="discountValue">The discount value applied to the sale.</param>
@@ -52,7 +51,6 @@ public sealed class SaleService(ISaleRepository saleRepository, ILogger<SaleServ
     public async Task<Sale> CreateSaleAsync(
         int eventDayId,
         int productId,
-        int? priceRuleId,
         decimal unitPrice,
         int quantityUnits,
         decimal discountValue = 0m,
@@ -73,7 +71,6 @@ public sealed class SaleService(ISaleRepository saleRepository, ILogger<SaleServ
             {
                 EventDayId = eventDayId,
                 ProductId = productId,
-                PriceRuleId = priceRuleId,
                 Price = unitPrice,
                 QuantityUnits = quantityUnits,
                 DiscountValue = discountValue,
@@ -156,7 +153,6 @@ public sealed class SaleService(ISaleRepository saleRepository, ILogger<SaleServ
     /// <param name="quantityUnits">The new quantity of units sold.</param>
     /// <param name="discountValue">The new discount value applied to the sale.</param>
     /// <param name="notes">The new notes for the sale.</param>
-    /// <param name="priceRuleId">The new price rule ID (optional).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
     /// The updated <see cref="Sale"/> with <see cref="Product"/> navigation loaded.
@@ -172,7 +168,6 @@ public sealed class SaleService(ISaleRepository saleRepository, ILogger<SaleServ
         int quantityUnits,
         decimal discountValue,
         string? notes,
-        int? priceRuleId,
         CancellationToken ct = default)
     {
         try
@@ -186,7 +181,7 @@ public sealed class SaleService(ISaleRepository saleRepository, ILogger<SaleServ
                 saleId, eventDayId, unitPrice, quantityUnits);
 
             var updatedSale = await saleRepository.UpdateSaleAsync(
-                saleId, unitPrice, quantityUnits, discountValue, notes, priceRuleId, ct);
+                saleId, unitPrice, quantityUnits, discountValue, notes, ct);
 
             await notificationService.NotifySaleCreatedAsync(eventDayId, saleId, ct);
 

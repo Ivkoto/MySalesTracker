@@ -17,10 +17,6 @@ public sealed class Sale
     public int ProductId { get; init; }
     public Product Product { get; init; } = null!;
 
-    [ForeignKey("PriceRule")]
-    public int? PriceRuleId { get; init; }
-    public PriceRule? PriceRule { get; init; }
-
     [Column(TypeName = "decimal(6,2)")]
     public decimal Price { get; init; }
 

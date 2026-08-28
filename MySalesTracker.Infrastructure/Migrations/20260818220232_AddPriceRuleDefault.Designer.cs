@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MySalesTracker.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using MySalesTracker.Infrastructure.Persistence;
 namespace MySalesTracker.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260818220232_AddPriceRuleDefault")]
+    partial class AddPriceRuleDefault
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -151,6 +154,12 @@ namespace MySalesTracker.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(0);
 
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("EffectiveTo")
+                        .HasColumnType("date");
+
                     b.Property<bool>("IsDefault")
                         .HasColumnType("bit");
 
@@ -168,12 +177,11 @@ namespace MySalesTracker.Infrastructure.Migrations
 
                     b.HasKey("PriceRuleId");
 
-                    b.HasIndex("ProductId")
+                    b.HasIndex("ProductId", "EffectiveFrom")
                         .IsUnique()
                         .HasFilter("[IsDefault] = 1");
 
-                    b.HasIndex("ProductId", "Price")
-                        .IsUnique();
+                    b.HasIndex("ProductId", "Price");
 
                     b.ToTable("PriceRules");
                 });
@@ -232,6 +240,9 @@ namespace MySalesTracker.Infrastructure.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(6,2)");
 
+                    b.Property<int?>("PriceRuleId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
@@ -241,6 +252,8 @@ namespace MySalesTracker.Infrastructure.Migrations
                     b.HasKey("SaleId");
 
                     b.HasIndex("EventDayId");
+
+                    b.HasIndex("PriceRuleId");
 
                     b.HasIndex("ProductId");
 
@@ -299,6 +312,10 @@ namespace MySalesTracker.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("MySalesTracker.Domain.Entities.PriceRule", "PriceRule")
+                        .WithMany()
+                        .HasForeignKey("PriceRuleId");
+
                     b.HasOne("MySalesTracker.Domain.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
@@ -306,6 +323,8 @@ namespace MySalesTracker.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("EventDay");
+
+                    b.Navigation("PriceRule");
 
                     b.Navigation("Product");
                 });

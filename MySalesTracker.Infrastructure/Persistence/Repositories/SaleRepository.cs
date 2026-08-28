@@ -49,7 +49,6 @@ internal class SaleRepository(IDbContextFactory<AppDbContext> contextFactory) : 
         int quantityUnits,
         decimal discountValue,
         string? notes,
-        int? priceRuleId,
         CancellationToken ct = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(ct);
@@ -60,8 +59,7 @@ internal class SaleRepository(IDbContextFactory<AppDbContext> contextFactory) : 
                 .SetProperty(s => s.Price, price)
                 .SetProperty(s => s.QuantityUnits, quantityUnits)
                 .SetProperty(s => s.DiscountValue, discountValue)
-                .SetProperty(s => s.Notes, notes)
-                .SetProperty(s => s.PriceRuleId, priceRuleId),
+                .SetProperty(s => s.Notes, notes),
                 ct);
 
         return await context.Sale
