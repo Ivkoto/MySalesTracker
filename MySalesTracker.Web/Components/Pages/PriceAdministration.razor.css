@@ -1,0 +1,249 @@
+.price-page-header {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.price-page-header h2 {
+    margin: 0;
+}
+
+.brand-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.25rem;
+    width: 100%;
+    margin-bottom: 1rem;
+    padding: 0.25rem;
+    border: 1px solid #d9e2ec;
+    border-radius: 0.4rem;
+    background: #f3f6f9;
+}
+
+.brand-tab {
+    min-width: 0;
+    min-height: 2.5rem;
+    border: 0;
+    border-radius: 0.3rem;
+    color: #334155;
+    background: transparent;
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.brand-tab-active {
+    color: #fff;
+    background: #1769aa;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+}
+
+.product-price-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+.product-price-card {
+    min-width: 0;
+    border: 1px solid #d9e2ec;
+    border-radius: 0.4rem;
+    background: #fff;
+    box-shadow: 0 0.15rem 0.45rem rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+}
+
+.product-price-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.8rem;
+}
+
+.product-price-header h3 {
+    margin: 0 0 0.15rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.current-price-label,
+.free-price-label {
+    color: #64748b;
+    font-size: 0.78rem;
+}
+
+.free-price-label {
+    color: #7c3f00;
+    font-weight: 700;
+}
+
+.edit-price-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 0 0 auto;
+    min-height: 2.1rem;
+}
+
+.current-price-rules {
+    border-top: 1px solid #edf1f5;
+}
+
+.current-rule-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 4rem auto;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.6rem;
+    padding: 0.45rem 0.8rem;
+    border-bottom: 1px solid #edf1f5;
+}
+
+.current-rule-row:last-child {
+    border-bottom: 0;
+}
+
+.current-rule-row > :nth-child(2) {
+    color: #64748b;
+    text-align: right;
+}
+
+.default-price-label {
+    justify-self: end;
+    padding: 0.2rem 0.4rem;
+    border-radius: 999px;
+    color: #146c43;
+    background: #e7f6ee;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.free-price-state {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.8rem;
+    border-top: 1px solid #edf1f5;
+    color: #64748b;
+    font-size: 0.88rem;
+}
+
+.price-editor {
+    padding: 0.8rem;
+    border-top: 1px solid #dbe7f2;
+    background: #f8fafc;
+}
+
+.editor-column-labels,
+.editable-rule-row {
+    display: grid;
+    grid-template-columns: 2.25rem minmax(0, 1fr) 4.5rem 2.25rem;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.editor-column-labels {
+    margin-bottom: 0.25rem;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.editor-column-labels span:first-child {
+    text-align: center;
+}
+
+.editable-rule-row {
+    margin-bottom: 0.5rem;
+}
+
+.editable-rule-row input[type="radio"] {
+    justify-self: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: #16834f;
+}
+
+.editable-rule-row .form-control {
+    min-width: 0;
+    min-height: 2.35rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.9rem;
+}
+
+.units-input {
+    text-align: center;
+}
+
+.remove-rule-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid #e4a5a5;
+    border-radius: 0.35rem;
+    color: #a51d2d;
+    background: #fff;
+}
+
+.remove-rule-button:disabled {
+    opacity: 0.35;
+}
+
+.add-rule-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 0;
+    color: #1769aa;
+    background: transparent;
+    font-size: 0.83rem;
+    font-weight: 700;
+}
+
+.add-rule-button {
+    min-height: 2.2rem;
+    margin-top: 0.1rem;
+    padding: 0.25rem 0;
+}
+
+.editor-error {
+    margin-top: 0.5rem;
+    color: #a51d2d;
+    font-size: 0.82rem;
+}
+
+.editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.editor-actions .btn {
+    min-width: 5.5rem;
+    min-height: 2.2rem;
+}
+
+@media (min-width: 768px) {
+    .brand-tabs {
+        width: 28rem;
+    }
+
+    .product-price-list {
+        grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+    }
+
+    .product-price-card {
+        align-self: start;
+    }
+}
+
+@media (min-width: 1200px) {
+    .product-price-list {
+        grid-template-columns: repeat(auto-fill, minmax(21rem, 24rem));
+    }
+}

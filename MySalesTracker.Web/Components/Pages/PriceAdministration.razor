@@ -1,0 +1,357 @@
+@page "/admin/prices"
+@attribute [Authorize]
+@inject PriceRuleService PriceRuleSvc
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Цени</PageTitle>
+
+<div class="price-page-header">
+    <h2>Цени</h2>
+</div>
+
+<div class="brand-tabs" role="tablist" aria-label="Марка">
+    @foreach (var brand in BrandOrder)
+    {
+        <button type="button"
+                role="tab"
+                aria-selected="@(selectedBrand == brand)"
+                class="brand-tab @(selectedBrand == brand ? "brand-tab-active" : null)"
+                @onclick="() => SelectBrand(brand)">
+            @brand.GetDisplayName()
+        </button>
+    }
+</div>
+
+@if (!string.IsNullOrWhiteSpace(pageMessage))
+{
+    <div class="alert alert-success py-2" role="status">@pageMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(pageError))
+{
+    <div class="alert alert-danger py-2" role="alert">@pageError</div>
+}
+
+@if (isLoading)
+{
+    <p class="text-muted">Зареждане...</p>
+}
+else
+{
+    <section class="product-price-list" aria-label="Цени по продукти">
+        @foreach (var product in SelectedProducts)
+        {
+            var isEditing = editingProductId == product.ProductId;
+
+            <article class="product-price-card">
+                <div class="product-price-header">
+                    <div>
+                        <h3>@product.ProductName</h3>
+                        @if (product.IsFreePrice)
+                        {
+                            <span class="free-price-label">Свободна цена</span>
+                        }
+                        else if (product.CurrentRules.Count > 0)
+                        {
+                            <span class="current-price-label">Текущи цени</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Няма активни цени</span>
+                        }
+                    </div>
+
+                    @if (!product.IsFreePrice && !isEditing)
+                    {
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm edit-price-button"
+                                @onclick="() => StartEditing(product)">
+                            <span class="bi bi-pencil" aria-hidden="true"></span>
+                            Промени
+                        </button>
+                    }
+                </div>
+
+                @if (product.IsFreePrice)
+                {
+                    <div class="free-price-state">
+                        <span class="bi bi-input-cursor-text" aria-hidden="true"></span>
+                        Цената се въвежда при продажба
+                    </div>
+                }
+                else if (isEditing)
+                {
+                    <div class="price-editor">
+                        <div class="editor-column-labels" aria-hidden="true">
+                            <span>Осн.</span>
+                            <span>Цена (EUR)</span>
+                            <span>бр.</span>
+                            <span></span>
+                        </div>
+
+                        @foreach (var rule in editableRules)
+                        {
+                            <div class="editable-rule-row">
+                                <input type="radio"
+                                       name="default-price"
+                                       title="Основна цена"
+                                       aria-label="Основна цена"
+                                       checked="@rule.IsDefault"
+                                       @onchange="() => SelectDefaultRule(rule)" />
+                                <input type="text"
+                                       inputmode="decimal"
+                                       class="form-control"
+                                       aria-label="Цена"
+                                       placeholder="0,00"
+                                       @bind="rule.PriceText"
+                                       @bind:event="oninput" />
+                                <input type="number"
+                                       inputmode="numeric"
+                                       min="1"
+                                       class="form-control units-input"
+                                       aria-label="Бройки"
+                                       @bind="rule.UnitsPerSale" />
+                                <button type="button"
+                                        class="remove-rule-button"
+                                        title="Премахни цена"
+                                        aria-label="Премахни цена"
+                                        disabled="@(editableRules.Count == 1)"
+                                        @onclick="() => RemoveRule(rule)">
+                                    <span class="bi bi-trash" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                        }
+
+                        <button type="button" class="add-rule-button" @onclick="AddRule">
+                            <span class="bi bi-plus-lg" aria-hidden="true"></span>
+                            Добави цена
+                        </button>
+
+                        @if (!string.IsNullOrWhiteSpace(editorError))
+                        {
+                            <div class="editor-error" role="alert">@editorError</div>
+                        }
+
+                        <div class="editor-actions">
+                            <button type="button"
+                                    class="btn btn-primary btn-sm"
+                                    disabled="@isSaving"
+                                    @onclick="() => SaveChangesAsync(product)">
+                                @(isSaving ? "Записване..." : "Запази")
+                            </button>
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    disabled="@isSaving"
+                                    @onclick="CancelEditing">
+                                Откажи
+                            </button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    @if (product.CurrentRules.Count > 0)
+                    {
+                        <div class="current-price-rules">
+                            @foreach (var rule in product.CurrentRules)
+                            {
+                                <div class="current-rule-row">
+                                    <strong>@FormatPrice(rule.Price)</strong>
+                                    <span>@rule.UnitsPerSale бр.</span>
+                                    @if (rule.IsDefault)
+                                    {
+                                        <span class="default-price-label">Основна</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+
+                }
+            </article>
+        }
+    </section>
+}
+
+@code {
+    private static readonly Brand[] BrandOrder = [Brand.Totem, Brand.Ceramics, Brand.Candles];
+    private static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+
+    private List<ProductPricing> products = [];
+    private readonly List<EditablePriceRule> editableRules = [];
+    private Brand selectedBrand = Brand.Totem;
+    private int? editingProductId;
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? pageMessage;
+    private string? pageError;
+    private string? editorError;
+
+    private IEnumerable<ProductPricing> SelectedProducts
+        => products.Where(product => product.Brand == selectedBrand);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProductsAsync();
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        isLoading = true;
+        pageError = null;
+
+        try
+        {
+            products = await PriceRuleSvc.GetProductPricingAsync();
+        }
+        catch
+        {
+            pageError = "Цените не можаха да бъдат заредени.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectBrand(Brand brand)
+    {
+        selectedBrand = brand;
+        CancelEditing();
+        pageMessage = null;
+        pageError = null;
+    }
+
+    private void StartEditing(ProductPricing product)
+    {
+        editingProductId = product.ProductId;
+        pageMessage = null;
+        pageError = null;
+        editorError = null;
+        editableRules.Clear();
+
+        editableRules.AddRange(product.CurrentRules.Select(rule => new EditablePriceRule
+        {
+            PriceText = rule.Price.ToString("0.00", Bg),
+            UnitsPerSale = rule.UnitsPerSale,
+            IsDefault = rule.IsDefault
+        }));
+
+        if (editableRules.Count == 0)
+        {
+            editableRules.Add(new EditablePriceRule { UnitsPerSale = 1, IsDefault = true });
+        }
+        else if (editableRules.Count(rule => rule.IsDefault) != 1)
+        {
+            foreach (var rule in editableRules)
+            {
+                rule.IsDefault = false;
+            }
+
+            editableRules[0].IsDefault = true;
+        }
+    }
+
+    private void CancelEditing()
+    {
+        editingProductId = null;
+        editorError = null;
+        editableRules.Clear();
+        isSaving = false;
+    }
+
+    private void AddRule()
+    {
+        editableRules.Add(new EditablePriceRule
+        {
+            UnitsPerSale = 1,
+            IsDefault = editableRules.Count == 0
+        });
+    }
+
+    private void RemoveRule(EditablePriceRule rule)
+    {
+        if (editableRules.Count == 1)
+        {
+            return;
+        }
+
+        var wasDefault = rule.IsDefault;
+        editableRules.Remove(rule);
+        if (wasDefault)
+        {
+            editableRules[0].IsDefault = true;
+        }
+    }
+
+    private void SelectDefaultRule(EditablePriceRule selectedRule)
+    {
+        foreach (var rule in editableRules)
+        {
+            rule.IsDefault = ReferenceEquals(rule, selectedRule);
+        }
+    }
+
+    private async Task SaveChangesAsync(ProductPricing product)
+    {
+        editorError = null;
+        var inputs = new List<PriceRuleInput>(editableRules.Count);
+
+        foreach (var rule in editableRules)
+        {
+            if (!DecimalParsingHelper.TryParseDecimal(rule.PriceText, out var price))
+            {
+                editorError = "Въведете валидна цена за всеки ред.";
+                return;
+            }
+
+            inputs.Add(new PriceRuleInput(price, rule.UnitsPerSale, rule.IsDefault));
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>(
+            "confirm",
+            $"Текущите цени за {product.ProductName} ще бъдат заменени. Да продължа ли?");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        ServiceResult<bool> result;
+        isSaving = true;
+        try
+        {
+            result = await PriceRuleSvc.UpdateProductPriceRulesAsync(
+                new UpdateProductPriceRulesRequest(product.ProductId, inputs));
+        }
+        catch
+        {
+            editorError = "Цените не можаха да бъдат обновени.";
+            return;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+
+        if (!result.Success)
+        {
+            editorError = result.ErrorMessage;
+            return;
+        }
+
+        CancelEditing();
+        pageMessage = result.SuccessMessage;
+        await LoadProductsAsync();
+    }
+
+    private static string FormatPrice(decimal price)
+        => $"{price.ToString("0.00", Bg)} EUR";
+
+    private sealed class EditablePriceRule
+    {
+        public string? PriceText { get; set; }
+        public int UnitsPerSale { get; set; }
+        public bool IsDefault { get; set; }
+    }
+}
