@@ -75,7 +75,7 @@
                         aria-selected="@(selectedDayIndex == index)"
                         class="day-tab @(selectedDayIndex == index ? "day-tab-active" : null)"
                         @onclick="() => SelectDay(tabIndex)">
-                    <span class="day-tab-name">@GetDayTabName(day.Date, index)</span>
+                    <span class="day-tab-name">@GetDayTabName(day.Date)</span>
                     <span class="day-tab-date">@FormatDate(day.Date)</span>
                 </button>
             }
@@ -325,13 +325,8 @@
         selectedDayIndex = index;
     }
 
-    static string GetDayTabName(DateOnly date, int index)
-        => index switch
-        {
-            0 => "Днес",
-            1 => "Утре",
-            _ => date.ToDateTime(TimeOnly.MinValue).ToString("ddd", Bg).TrimEnd('.')
-        };
+    static string GetDayTabName(DateOnly date)
+        => date.ToDateTime(TimeOnly.MinValue).ToString("ddd", Bg).TrimEnd('.');
 
     static string FormatDate(DateOnly date)
         => date.ToString("dd.MM", Bg);
