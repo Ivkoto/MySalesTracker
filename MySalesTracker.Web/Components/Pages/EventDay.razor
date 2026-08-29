@@ -99,7 +99,7 @@ else
     }
 
     <h4 class="mt-4">Последни 8 продажби</h4>
-    <table class="table table-striped align-middle compact-table" style="margin-left: -1.5rem; margin-right: -1.5rem;">
+    <table class="table table-striped align-middle compact-table sales-table">
           <thead class="table-warning">
               <tr>
                   <th class="px-3">Час</th>
@@ -120,9 +120,21 @@ else
                                     <td class="px-3">@FormatCurrency(s.Price, s.Currency)</td>
                                     <td class="px-3" style="color: @(s.DiscountValue > 0 ? "inherit" : "lightgray")">@FormatCurrency(s.DiscountValue, s.Currency)</td>
                   <td class="px-3 text-end">
-                          <div class="btn-group" role="group">
-                              <button class="btn btn-outline-primary btn-sm" @onclick="() => EditSale(s.SaleId)">Edit</button>
-                              <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteSale(s.SaleId)">Delete</button>
+                          <div class="sale-actions" role="group" aria-label="Действия за продажбата">
+                              <button type="button"
+                                      class="btn btn-outline-primary sale-action-button"
+                                      title="Редактирай"
+                                      aria-label="Редактирай продажбата"
+                                      @onclick="() => EditSale(s.SaleId)">
+                                  <span class="bi bi-pencil" aria-hidden="true"></span>
+                              </button>
+                              <button type="button"
+                                      class="btn btn-outline-danger sale-action-button"
+                                      title="Изтрий"
+                                      aria-label="Изтрий продажбата"
+                                      @onclick="() => DeleteSale(s.SaleId)">
+                                  <span class="bi bi-trash3" aria-hidden="true"></span>
+                              </button>
                           </div>
                       </td>
                 </tr>
@@ -133,7 +145,7 @@ else
     @foreach (var summary in brandSummaries)
     {
       <h4 class="mt-4">@summary.Brand.GetDisplayName()</h4>
-      <table class="table table-striped align-middle compact-table" style="margin-left: -1.5rem; margin-right: -1.5rem;">
+      <table class="table table-striped align-middle compact-table sales-table">
           <thead class="table-warning">
               <tr>
                   <th class="px-3">Час</th>
@@ -156,9 +168,21 @@ else
                       <td class="px-3" style="color: @(s.DiscountValue > 0 ? "inherit" : "lightgray")">@FormatCurrency(s.DiscountValue, s.Currency)</td>
                       @* <td class="px-3">@s.Notes</td> *@
                       <td class="px-3 text-end">
-                          <div class="btn-group" role="group">
-                              <button class="btn btn-outline-primary btn-sm" @onclick="() => EditSale(s.SaleId)">Edit</button>
-                              <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteSale(s.SaleId)">Delete</button>
+                          <div class="sale-actions" role="group" aria-label="Действия за продажбата">
+                              <button type="button"
+                                      class="btn btn-outline-primary sale-action-button"
+                                      title="Редактирай"
+                                      aria-label="Редактирай продажбата"
+                                      @onclick="() => EditSale(s.SaleId)">
+                                  <span class="bi bi-pencil" aria-hidden="true"></span>
+                              </button>
+                              <button type="button"
+                                      class="btn btn-outline-danger sale-action-button"
+                                      title="Изтрий"
+                                      aria-label="Изтрий продажбата"
+                                      @onclick="() => DeleteSale(s.SaleId)">
+                                  <span class="bi bi-trash3" aria-hidden="true"></span>
+                              </button>
                           </div>
                       </td>
                   </tr>
