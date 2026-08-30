@@ -5,24 +5,21 @@
 <PageTitle>Home</PageTitle>
 
 <div class="text-center">
-    <h1>Hello, TOTEM!</h1>
+    <h1>🌊 Totem се пуска по Реките на София! 🌊<br />⛵ 💸 😎</h1>
     <br />
-    <h3>шИ къртим ли кинтИ днес?<br />🤑 💰 </h3>
-    <br />
-    <br />
-
     <div class="home-button-container">
         <NavLink class="home-nav-button" href="weather">
-            <h3>Да разопаковам ли шатрата?<br /> ⛈️ ☔️ 🌪️ 🔆 ⛱️ 👀</h3>
+            <h3>Ще плувам или ще продавам?<br /> ⛈️ ⛵ 💼 💦 👀</h3>
         </NavLink>
     </div>
-
     <br />
-
     <div class="home-button-container">
         <NavLink class="home-nav-button" href="events">
-            <h3>Ще се работи!<br /> 💵 📝</h3>
+            <h3>Ще се върна (ако не ме отнесе)<br /> 🤞 🏄‍♀️ 📋</h3>
         </NavLink>
+    </div>
+    <div class="home-image-container">
+        <img class="home-image" src="images/TotemOnTour.png" alt="Home image" />
     </div>
 </div>
 
@@ -57,6 +54,18 @@ For some reason if we did this, it breaks the style!*@
     .home-nav-button h3 {
         margin: 0;
         font-weight: 300;
+    }
+
+    .home-image-container {
+        max-width: 15rem;
+        margin: 1.5rem auto 0;
+    }
+
+    .home-image {
+        display: block;
+        width: 100%;
+        border-radius: 1rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
     }
 </style>
 
