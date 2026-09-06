@@ -6,6 +6,8 @@ namespace MySalesTracker.Domain.Services;
 /// </summary>
 public static class WeatherCalculations
 {
+    public const double RainfallScaleMaxMm = 2.0;
+
     /// <summary>
     /// Value between 0 and 1.
     /// </summary>
@@ -24,8 +26,7 @@ public static class WeatherCalculations
     /// <returns>Hue value in range 60-210 (yellow to blue).</returns>
     private static int HueForRain(double mm)
     {
-        const double MaxRain = 2.0;
-        var t = Clamp01(mm / MaxRain);
+        var t = Clamp01(mm / RainfallScaleMaxMm);
         var hue = Lerp(60, 210, t);
         return (int)Math.Round(hue);
     }

@@ -4,22 +4,22 @@
 
 <PageTitle>Home</PageTitle>
 
-<div class="text-center">
-    <h1>🌊 Totem се пуска по Реките на София! 🌊<br />⛵ 💸 😎</h1>
-    <br />
-    <div class="home-button-container">
-        <NavLink class="home-nav-button" href="weather">
-            <h3>Ще плувам или ще продавам?<br /> ⛈️ ⛵ 💼 💦 👀</h3>
-        </NavLink>
-    </div>
-    <br />
-    <div class="home-button-container">
-        <NavLink class="home-nav-button" href="events">
-            <h3>Ще се върна (ако не ме отнесе)<br /> 🤞 🏄‍♀️ 📋</h3>
-        </NavLink>
+<div class="home-page text-center">
+    <img class="home-logo" src="images/logo01_retina.png" alt="Home image" />
+    <div class="home-actions">
+        <div class="home-button-container">
+            <NavLink class="home-nav-button" href="weather">
+                <h3>Дали Вали?<br /> ⛈️ ⛵ 💼 💦 👀</h3>
+            </NavLink>
+        </div>
+        <div class="home-button-container">
+            <NavLink class="home-nav-button" href="events">
+                <h3>Ще се работи!<br /> 🤞 🏄‍♀️ 📋</h3>
+            </NavLink>
+        </div>
     </div>
     <div class="home-image-container">
-        <img class="home-image" src="images/TotemOnTour.png" alt="Home image" />
+        <img class="home-image" src="images/kuker1000.png" alt="Home image" />
     </div>
 </div>
 
@@ -27,9 +27,31 @@
 isolation file (Home.razor.css)to follow Blazor best practices and improve maintainability.
 For some reason if we did this, it breaks the style!*@
 <style>
+    .home-page {
+        display: grid;
+        grid-template-rows: minmax(0, 0.8fr) auto minmax(0, 1.2fr);
+        min-block-size: calc(100dvh - 4.6rem);
+    }
+
+    .home-logo {
+        align-self: start;
+        display: block;
+        width: 100%;
+        max-width: 24rem;
+        height: auto;
+        justify-self: center;
+        margin-block-start: 1rem;
+    }
+
+    .home-actions {
+        display: grid;
+        gap: 1.5rem;
+    }
+
     .home-button-container {
         max-width: 36rem;
         margin: 0 auto;
+        width: 100%;
     }
 
     .home-nav-button {
@@ -57,15 +79,28 @@ For some reason if we did this, it breaks the style!*@
     }
 
     .home-image-container {
+        align-self: end;
         max-width: 15rem;
-        margin: 1.5rem auto 0;
+        justify-self: center;
+    }
+
+    .home-image-boxed {
+        display: block;
+        width: 100%;
+        border-radius: 1rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
     }
 
     .home-image {
         display: block;
         width: 100%;
-        border-radius: 1rem;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
+        height: auto;
+    }
+
+    @@media (min-width: 641px) {
+        .home-page {
+            min-block-size: calc(100dvh - 1.1rem);
+        }
     }
 </style>
 

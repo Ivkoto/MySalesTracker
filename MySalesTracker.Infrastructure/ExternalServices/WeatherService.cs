@@ -48,7 +48,7 @@ public sealed class WeatherService(HttpClient http) : IWeatherService
     public async Task<WeatherForecast?> GetForecast(double lat, double lon, int forecastDays = 7)
     {
         var days = Math.Clamp(forecastDays, 1, 10);
-        var url = $"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,wind_speed_10m,precipitation_probability,precipitation&temperature_unit=celsius&windspeed_unit=kmh&forecast_days={days}&timezone=auto";
+        var url = FormattableString.Invariant($"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,wind_speed_10m,precipitation_probability,precipitation&temperature_unit=celsius&windspeed_unit=kmh&forecast_days={days}&timezone=auto");
         
         try
         {
