@@ -1,8 +1,10 @@
 @page "/weather"
 @attribute [Authorize]
+@implements IDisposable
 
 @inject WeatherState State
 @inject IWeatherService WeatherSvc
+@inject IJSRuntime JS
 
 <PageTitle>Прогноза</PageTitle>
 
@@ -11,7 +13,7 @@
         <h2>Дали вали</h2>
         @if (summary is not null)
         {
-            <div class="weather-location">
+            <div class="weather-location" aria-live="polite">
                 <span class="bi bi-geo-alt" aria-hidden="true"></span>
                 <span>@summary.Name</span>
             </div>
@@ -19,20 +21,36 @@
     </div>
 </header>
 
-<form class="forecast-controls" @onsubmit="Load" @onsubmit:preventDefault>
-    <label class="control-field city-control">
+<form class="forecast-controls" @onsubmit="SearchCity" @onsubmit:preventDefault>
+    <div class="control-field city-control">
         <span class="visually-hidden">Град</span>
         <span class="bi bi-geo-alt control-icon" aria-hidden="true"></span>
         <input class="form-control"
                autocomplete="address-level2"
                aria-label="Град"
                placeholder="Град, напр. София"
+               disabled="@IsBusy"
                @bind="city" />
-    </label>
+        <button type="button" class="location-button @(State.CurrentLocation is not null ? "location-button-active" : null)"
+                aria-label="Използвай текущото ми местоположение"
+                title="Използвай текущото ми местоположение"
+                disabled="@IsBusy" aria-busy="@isLocating" @onclick="UseCurrentLocation">
+            @if (isLocating)
+            {
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            }
+            else
+            {
+                <span class="bi bi-crosshair" aria-hidden="true"></span>
+            }
+        </button>
+        <span class="visually-hidden" role="status">@(isLocating ? "Определяне на местоположението…" : null)</span>
+    </div>
 
     <label class="control-field">
         <span class="visually-hidden">Брой дни</span>
-        <select class="form-select" aria-label="Брой дни" @bind="displayDays">
+        <select class="form-select" aria-label="Брой дни" disabled="@IsBusy"
+                @bind="displayDays" @bind:after="Load">
             @for (var d = 1; d <= MaxForecastDays; d++)
             {
                 <option value="@d">@d @(d == 1 ? "ден" : "дни")</option>
@@ -44,7 +62,7 @@
             class="btn btn-primary forecast-submit"
             aria-label="Покажи прогноза"
             title="Покажи прогноза"
-            disabled="@isLoading">
+            disabled="@IsBusy">
         @if (isLoading)
         {
             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -133,6 +151,7 @@
                     {
                         var rainAccent = WeatherCalculations.GetRainBorderColor(hour.Mm);
                         var rainProbability = Math.Clamp(hour.Prob, 0, 100);
+                        var rainfallPercent = Math.Clamp(hour.Mm / WeatherCalculations.RainfallScaleMaxMm, 0, 1) * 100;
 
                         <article class="hour-item">
                             <time class="hour-time"
@@ -144,13 +163,15 @@
                                 <span class="bi bi-droplet-fill" aria-hidden="true"></span>
                                 <span>@rainProbability%</span>
                             </div>
-                            <span class="hour-precipitation">@FormatNumber(hour.Mm) mm</span>
                             <div class="hour-wind">
                                 <span class="bi bi-wind" aria-hidden="true"></span>
                                 <span>@FormatNumber(hour.Wind)</span>
                             </div>
-                            <div class="rain-probability-bar" aria-hidden="true">
-                                <span style="width: @(rainProbability)%; background-color: @rainAccent"></span>
+                            <div class="hour-precipitation">
+                                <span>@FormatNumber(hour.Mm) mm</span>
+                                <div class="rainfall-amount-bar" aria-hidden="true">
+                                    <span style="width: @(rainfallPercent.ToString("0.##", CultureInfo.InvariantCulture))%; background-color: @rainAccent"></span>
+                                </div>
                             </div>
                         </article>
                     }
@@ -166,9 +187,18 @@
 
     string city = "Sofia";
     string? error;
-    int displayDays = 3;
+    int displayDays
+    {
+        get => State.DisplayDays;
+        set => State.DisplayDays = value;
+    }
     int selectedDayIndex;
     bool isLoading;
+    bool isLocating;
+    bool isDisposed;
+    bool IsBusy => isLoading || isLocating;
+
+    public sealed record LocationResult(double Latitude, double Longitude, string? Error, string? City = null);
 
     sealed record HourEntry(DateTime Time, double Temp, double Wind, int Prob, double Mm);
 
@@ -195,7 +225,7 @@
         city = State.City;
         displayDays = Math.Clamp(State.DisplayDays, 1, MaxForecastDays);
 
-        if (State.LastSummary is not null)
+        if (State.LastSummary is not null && State.LastSummary.Days.Count == displayDays)
         {
             summary = new Summary(
                 State.LastSummary.Name,
@@ -214,25 +244,118 @@
         }
     }
 
-    async Task Load()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && summary is null)
+        {
+            await Load();
+            StateHasChanged();
+        }
+    }
+
+    async Task UseCurrentLocation()
     {
         error = null;
-        city = city.Trim();
+        isLocating = true;
+        try
+        {
+            var location = await JS.InvokeAsync<LocationResult>("weatherLocation.getCurrent");
+            if (isDisposed)
+            {
+                return;
+            }
 
+            var locationError = location.Error ?? (string.IsNullOrWhiteSpace(location.City) ? "city-unavailable" : null);
+            if (locationError is not null)
+            {
+                error = locationError switch
+                {
+                    "denied" => "Достъпът до местоположението е отказан. Разрешете го от настройките на браузъра или въведете град.",
+                    "timeout" => "Определянето на местоположението отне твърде дълго. Опитайте отново или въведете град.",
+                    "unsupported" => "Браузърът не поддържа определяне на местоположението. Въведете град.",
+                    "insecure" => "За достъп до местоположението отворете приложението през HTTPS или въведете град.",
+                    "city-unavailable" => "Местоположението е намерено, но името на града не можа да бъде заредено. Опитайте отново или въведете град.",
+                    _ => "Местоположението не е достъпно. Проверете настройките на устройството или въведете град."
+                };
+                return;
+            }
+
+            State.CurrentLocation = new WeatherState.Coordinates(location.Latitude, location.Longitude);
+            State.City = city = location.City!.Trim();
+            State.Store(null);
+            summary = null;
+            await Load();
+        }
+        catch (JSException)
+        {
+            error = "Местоположението не можа да бъде определено. Опитайте отново или въведете град.";
+        }
+        catch (OperationCanceledException)
+        {
+            error = "Определянето на местоположението отне твърде дълго. Опитайте отново или въведете град.";
+        }
+        finally
+        {
+            isLocating = false;
+        }
+    }
+
+    async Task SearchCity()
+    {
+        city = city.Trim();
         if (string.IsNullOrWhiteSpace(city))
         {
             error = "Трябва да бъде въведен град.";
             return;
         }
 
+        if (State.CurrentLocation is not null && string.Equals(State.City, city, StringComparison.OrdinalIgnoreCase))
+        {
+            await Load();
+            return;
+        }
+
+        if (State.CurrentLocation is not null || State.City != city)
+        {
+            State.Store(null);
+            summary = null;
+        }
+        State.CurrentLocation = null;
+        await Load();
+    }
+
+    async Task Load()
+    {
+        error = null;
+        var requestedLocation = State.CurrentLocation;
+
+        if (requestedLocation is null)
+        {
+            city = city.Trim();
+            if (string.IsNullOrWhiteSpace(city))
+            {
+                error = "Трябва да бъде въведен град.";
+                return;
+            }
+            State.City = city;
+        }
+
         displayDays = Math.Clamp(displayDays, 1, MaxForecastDays);
-        State.City = city;
-        State.DisplayDays = displayDays;
+        var requestedCity = State.City;
+        var requestedDays = displayDays;
+
+        if (summary?.Days.Count != requestedDays)
+        {
+            summary = null;
+        }
 
         isLoading = true;
+        StateHasChanged();
         try
         {
-            var geo = await WeatherSvc.FetchGeocode(city);
+            var geo = requestedLocation is null
+                ? await WeatherSvc.FetchGeocode(requestedCity)
+                : (requestedLocation.Latitude, requestedLocation.Longitude, requestedCity);
 
             if (geo is null)
             {
@@ -241,7 +364,7 @@
             }
 
             var (lat, lon, name) = geo.Value;
-            var forecast = await WeatherSvc.GetForecast(lat, lon, displayDays);
+            var forecast = await WeatherSvc.GetForecast(lat, lon, requestedDays);
 
             if (forecast?.Hours is null || forecast.Hours.Count == 0)
             {
@@ -249,7 +372,7 @@
                 return;
             }
 
-            var maxHours = Math.Min(displayDays * HoursPerDay, forecast.Hours.Count);
+            var maxHours = Math.Min(requestedDays * HoursPerDay, forecast.Hours.Count);
             var parsedHours = new List<(DateTime Date, HourEntry Hour)>();
 
             for (var i = 0; i < maxHours; i++)
@@ -274,7 +397,7 @@
             var daySummaries = parsedHours
                 .GroupBy(entry => entry.Date)
                 .OrderBy(group => group.Key)
-                .Take(displayDays)
+                .Take(requestedDays)
                 .Select(group => new DayForecast(
                     DateOnly.FromDateTime(group.Key),
                     group.Select(entry => entry.Hour).ToList()))
@@ -286,7 +409,13 @@
                 return;
             }
 
-            summary = new Summary(name ?? city, lat, lon, daySummaries);
+            if (isDisposed || State.City != requestedCity || State.DisplayDays != requestedDays
+                || State.CurrentLocation != requestedLocation)
+            {
+                return;
+            }
+
+            summary = new Summary(name ?? requestedCity, lat, lon, daySummaries);
             selectedDayIndex = 0;
 
             State.Store(
@@ -314,6 +443,8 @@
             isLoading = false;
         }
     }
+
+    public void Dispose() => isDisposed = true;
 
     void SelectDay(int index)
     {
