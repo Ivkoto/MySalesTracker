@@ -16,6 +16,15 @@ public sealed class GeocodeItem
 public sealed class ForecastResponse
 {
     public Hourly? Hourly { get; set; }
+    public CurrentConditions? Current { get; set; }
+    public string? Timezone { get; set; }
+}
+
+public sealed class CurrentConditions
+{
+    public string? Time { get; set; }
+    public double Temperature_2m { get; set; }
+    public double Rain { get; set; }
 }
 
 /// <summary>

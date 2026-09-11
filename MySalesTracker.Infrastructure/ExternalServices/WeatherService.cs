@@ -35,7 +35,7 @@ public sealed class WeatherService(HttpClient http) : IWeatherService
     }
 
     /// <summary>
-    /// Retrieves weather forecast data from the Open-Meteo API for specified coordinates
+    /// Retrieves current conditions and hourly forecast data from the Open-Meteo API for specified coordinates
     /// and transforms it into the domain model.
     /// </summary>
     /// <param name="lat">The latitude of the location.</param>
@@ -48,7 +48,7 @@ public sealed class WeatherService(HttpClient http) : IWeatherService
     public async Task<WeatherForecast?> GetForecast(double lat, double lon, int forecastDays = 7)
     {
         var days = Math.Clamp(forecastDays, 1, 10);
-        var url = FormattableString.Invariant($"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m,wind_speed_10m,precipitation_probability,precipitation&temperature_unit=celsius&windspeed_unit=kmh&forecast_days={days}&timezone=auto");
+        var url = FormattableString.Invariant($"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,rain&hourly=temperature_2m,wind_speed_10m,precipitation_probability,precipitation&temperature_unit=celsius&windspeed_unit=kmh&forecast_days={days}&timezone=auto");
         
         try
         {
@@ -71,7 +71,16 @@ public sealed class WeatherService(HttpClient http) : IWeatherService
                 ));
             }
             
-            return new WeatherForecast(hours);
+            CurrentWeather? current = null;
+            if (response.Current?.Time is { } currentTime && DateTime.TryParse(currentTime, out var parsedCurrentTime))
+            {
+                current = new CurrentWeather(
+                    parsedCurrentTime,
+                    response.Current.Temperature_2m,
+                    response.Current.Rain);
+            }
+
+            return new WeatherForecast(hours, current, response.Timezone);
         }
         catch (HttpRequestException)
         {

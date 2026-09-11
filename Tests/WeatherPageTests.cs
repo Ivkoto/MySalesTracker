@@ -18,7 +18,8 @@ public sealed class WeatherPageTests
     {
         var state = new WeatherState();
         var weather = new WeatherServiceFake();
-        await using var services = CreateServices(state, weather);
+        var js = new LocationJsFake();
+        await using var services = CreateServices(state, weather, js);
         await using var renderer = new WeatherRenderer(services);
 
         await renderer.Dispatcher.InvokeAsync(async () =>
@@ -28,6 +29,9 @@ public sealed class WeatherPageTests
             Assert.Equal(3, renderer.SelectedCount(page));
             Assert.Equal(3, renderer.TabCount(page));
             Assert.Equal([3], weather.RequestedDays);
+            Assert.Equal(1, js.HourScrollCalls);
+            Assert.Equal(["2026-09-06T14"], js.HourKeys);
+            Assert.Equal(["Europe/Sofia"], js.HourTimeZones);
         });
     }
 
@@ -36,7 +40,8 @@ public sealed class WeatherPageTests
     {
         var state = new WeatherState();
         var weather = new WeatherServiceFake();
-        await using var services = CreateServices(state, weather);
+        var js = new LocationJsFake();
+        await using var services = CreateServices(state, weather, js);
         await using var renderer = new WeatherRenderer(services);
 
         await renderer.Dispatcher.InvokeAsync(async () =>
@@ -53,6 +58,7 @@ public sealed class WeatherPageTests
             Assert.Equal(5, renderer.TabCount(returnedPage));
             Assert.Equal([3, 5], weather.RequestedDays);
             Assert.Equal(3, new WeatherState().DisplayDays);
+            Assert.Equal(3, js.HourScrollCalls);
         });
     }
 
@@ -313,12 +319,23 @@ public sealed class WeatherPageTests
         public Weather.LocationResult Result { get; set; } = new(45.123456, 12.345678, null, "София");
         public Task<Weather.LocationResult>? PendingResult { get; set; }
         public int Calls { get; private set; }
+        public int HourScrollCalls { get; private set; }
+        public List<string?> HourKeys { get; } = [];
+        public List<string?> HourTimeZones { get; } = [];
 
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
             => InvokeAsync<TValue>(identifier, CancellationToken.None, args);
 
         public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
+            if (identifier == "weatherForecast.showCurrentHour")
+            {
+                HourScrollCalls++;
+                HourKeys.Add(args?[1]?.ToString());
+                HourTimeZones.Add(args?[2]?.ToString());
+                return default!;
+            }
+
             Assert.Equal("weatherLocation.getCurrent", identifier);
             Calls++;
             var result = PendingResult is null ? Result : await PendingResult;
@@ -365,7 +382,10 @@ public sealed class WeatherPageTests
             var hours = Enumerable.Range(0, forecastDays * 24)
                 .Select(hour => new HourlyForecast(start.AddHours(hour), 20, 5, 25, 0.8))
                 .ToList();
-            return new WeatherForecast(hours);
+            return new WeatherForecast(
+                hours,
+                new CurrentWeather(start.AddHours(14), 20, 0),
+                "Europe/Sofia");
         }
     }
 

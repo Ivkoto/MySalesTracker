@@ -7,7 +7,7 @@ namespace MySalesTracker.Tests;
 public sealed class WeatherServiceTests
 {
     [Fact]
-    public async Task Forecast_FormatsCoordinatesForApiUnderBulgarianCulture()
+    public async Task Forecast_FormatsCoordinatesAndMapsCurrentConditions()
     {
         var originalCulture = CultureInfo.CurrentCulture;
         try
@@ -16,10 +16,15 @@ public sealed class WeatherServiceTests
             var handler = new ForecastHandler();
             using var http = new HttpClient(handler);
 
-            await new WeatherService(http).GetForecast(45.123456, 12.345678, 5);
+            var forecast = await new WeatherService(http).GetForecast(45.123456, 12.345678, 5);
 
             Assert.Contains("latitude=45.123456&longitude=12.345678", handler.RequestUri!.Query);
             Assert.Contains("forecast_days=5", handler.RequestUri.Query);
+            Assert.Contains("current=temperature_2m,rain", handler.RequestUri.Query);
+            Assert.Equal(new DateTime(2026, 9, 11, 14, 15, 0), forecast!.Current!.Time);
+            Assert.Equal(24.2, forecast.Current.Temperature);
+            Assert.Equal(0.4, forecast.Current.Rainfall);
+            Assert.Equal("Europe/Sofia", forecast.TimeZone);
         }
         finally
         {
@@ -36,7 +41,7 @@ public sealed class WeatherServiceTests
             RequestUri = request.RequestUri;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"hourly\":{\"time\":[]}}")
+                Content = new StringContent("{\"timezone\":\"Europe/Sofia\",\"current\":{\"time\":\"2026-09-11T14:15\",\"temperature_2m\":24.2,\"rain\":0.4},\"hourly\":{\"time\":[]}}")
             });
         }
     }
