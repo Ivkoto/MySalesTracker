@@ -80,7 +80,7 @@ public sealed class WeatherService(HttpClient http) : IWeatherService
                     response.Current.Rain);
             }
 
-            return new WeatherForecast(hours, current);
+            return new WeatherForecast(hours, current, response.Timezone);
         }
         catch (HttpRequestException)
         {

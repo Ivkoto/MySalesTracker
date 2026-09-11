@@ -24,6 +24,7 @@ public sealed class WeatherServiceTests
             Assert.Equal(new DateTime(2026, 9, 11, 14, 15, 0), forecast!.Current!.Time);
             Assert.Equal(24.2, forecast.Current.Temperature);
             Assert.Equal(0.4, forecast.Current.Rainfall);
+            Assert.Equal("Europe/Sofia", forecast.TimeZone);
         }
         finally
         {
@@ -40,7 +41,7 @@ public sealed class WeatherServiceTests
             RequestUri = request.RequestUri;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"current\":{\"time\":\"2026-09-11T14:15\",\"temperature_2m\":24.2,\"rain\":0.4},\"hourly\":{\"time\":[]}}")
+                Content = new StringContent("{\"timezone\":\"Europe/Sofia\",\"current\":{\"time\":\"2026-09-11T14:15\",\"temperature_2m\":24.2,\"rain\":0.4},\"hourly\":{\"time\":[]}}")
             });
         }
     }

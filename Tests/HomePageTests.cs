@@ -55,7 +55,7 @@ public sealed class HomePageTests
                         hour.PrecipitationProbability,
                         hour.Time.Hour == 17 ? 0.8 : 0))
                     .ToList())],
-            new WeatherState.CurrentCondition(new DateTime(2026, 9, 11, 10, 0, 0), 20, 0.8)));
+            new WeatherState.CurrentCondition(new DateTime(2026, 9, 11, 10, 0, 0), 20, 0)));
         var weather = new WeatherServiceFake();
         await using var services = CreateServices(state, weather);
         await using var renderer = new HomeRenderer(services);
@@ -67,7 +67,108 @@ public sealed class HomePageTests
 
             Assert.Contains("Пловдив", text);
             Assert.Contains("Дъжд около 17:00", text);
+            Assert.Contains("20°", text);
             Assert.DoesNotContain("Вали в момента", text);
+            Assert.Empty(weather.RequestedCities);
+            Assert.Empty(weather.RequestedDays);
+        });
+    }
+
+    [Fact]
+    public async Task SuccessfulForecast_IsReusedAfterHomeNavigation()
+    {
+        var state = new WeatherState();
+        var weather = new WeatherServiceFake();
+        await using var services = CreateServices(state, weather);
+        await using var renderer = new HomeRenderer(services);
+
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var page = await renderer.OpenAsync();
+            renderer.Close(page);
+            var returnedPage = await renderer.OpenAsync();
+
+            Assert.Contains("София", renderer.Text(returnedPage));
+            Assert.Equal(["Sofia"], weather.RequestedCities);
+            Assert.Equal([1], weather.RequestedDays);
+            Assert.NotNull(state.LastSummary);
+            Assert.Single(state.LastSummary.Days);
+        });
+    }
+
+    [Fact]
+    public async Task ExpiredForecast_IsRefreshed()
+    {
+        var state = new WeatherState { City = "Plovdiv" };
+        state.Store(new WeatherState.Summary(
+            "Пловдив",
+            42.1,
+            24.7,
+            [new WeatherState.DaySummary(
+                new DateOnly(2026, 9, 11),
+                CreateHours()
+                    .Select(hour => new WeatherState.HourEntry(
+                        hour.Time,
+                        hour.Temperature,
+                        hour.WindSpeed,
+                        hour.PrecipitationProbability,
+                        hour.Precipitation))
+                    .ToList())],
+            new WeatherState.CurrentCondition(new DateTime(2026, 9, 11, 10, 0, 0), 20, 0))
+        {
+            CachedAtUtc = DateTimeOffset.UtcNow.AddHours(-1)
+        });
+        var weather = new WeatherServiceFake();
+        await using var services = CreateServices(state, weather);
+        await using var renderer = new HomeRenderer(services);
+
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var page = await renderer.OpenAsync();
+
+            Assert.Contains("София", renderer.Text(page));
+            Assert.Equal(["Plovdiv"], weather.RequestedCities);
+            Assert.Equal([1], weather.RequestedDays);
+            Assert.Equal("София", state.LastSummary!.Name);
+        });
+    }
+
+    [Fact]
+    public async Task CachedCurrentConditions_AreRejectedAfterTheCityHourChanges()
+    {
+        var cityNow = DateTime.UtcNow;
+        var previousHour = cityNow.AddHours(-1);
+        var state = new WeatherState();
+        state.Store(new WeatherState.Summary(
+            "UTC",
+            0,
+            0,
+            new[] { previousHour.Date, cityNow.Date }
+                .Distinct()
+                .Select(date => new WeatherState.DaySummary(
+                    DateOnly.FromDateTime(date),
+                    Enumerable.Range(0, 24)
+                        .Select(hour => new WeatherState.HourEntry(
+                            date.AddHours(hour),
+                            20,
+                            5,
+                            0,
+                            0))
+                        .ToList()))
+                .ToList(),
+            new WeatherState.CurrentCondition(previousHour, 99, 1),
+            "Etc/UTC"));
+        var weather = new WeatherServiceFake();
+        await using var services = CreateServices(state, weather);
+        await using var renderer = new HomeRenderer(services);
+
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var page = await renderer.OpenAsync();
+            var text = renderer.Text(page);
+
+            Assert.DoesNotContain("Вали в момента", text);
+            Assert.DoesNotContain("99°", text);
             Assert.Empty(weather.RequestedCities);
             Assert.Empty(weather.RequestedDays);
         });
@@ -108,7 +209,8 @@ public sealed class HomePageTests
             RequestedDays.Add(forecastDays);
             return Task.FromResult<WeatherForecast?>(new WeatherForecast(
                 CreateHours(),
-                new CurrentWeather(new DateTime(2026, 9, 11, 14, 0, 0), 24, 0.4)));
+                new CurrentWeather(new DateTime(2026, 9, 11, 14, 0, 0), 24, 0.4),
+                "Europe/Sofia"));
         }
     }
 
@@ -147,6 +249,8 @@ public sealed class HomePageTests
             await RenderRootComponentAsync(id);
             return id;
         }
+
+        public void Close(int id) => RemoveRootComponent(id);
 
         public string Text(int id)
             => string.Join(" ", Frames(id)

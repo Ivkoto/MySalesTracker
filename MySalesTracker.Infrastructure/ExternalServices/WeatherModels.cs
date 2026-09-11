@@ -17,6 +17,7 @@ public sealed class ForecastResponse
 {
     public Hourly? Hourly { get; set; }
     public CurrentConditions? Current { get; set; }
+    public string? Timezone { get; set; }
 }
 
 public sealed class CurrentConditions

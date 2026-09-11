@@ -186,6 +186,7 @@
 @code {
     const int MaxForecastDays = 10;
     const int HoursPerDay = 24;
+    const string HourKeyFormat = "yyyy-MM-ddTHH";
 
     string city = "Sofia";
     string? error;
@@ -215,7 +216,13 @@
         public double MaxWindSpeed => Hours.Count == 0 ? 0 : Hours.Max(hour => hour.Wind);
     }
 
-    sealed record Summary(string Name, double Lat, double Lon, List<DayForecast> Days);
+    sealed record Summary(
+        string Name,
+        double Lat,
+        double Lon,
+        List<DayForecast> Days,
+        DateTime? CurrentTime,
+        string? TimeZone);
 
     Summary? summary;
 
@@ -228,14 +235,15 @@
     {
         city = State.City;
         displayDays = Math.Clamp(State.DisplayDays, 1, MaxForecastDays);
+        var storedSummary = State.GetFreshSummary();
 
-        if (State.LastSummary is not null && State.LastSummary.Days.Count == displayDays)
+        if (storedSummary is not null && storedSummary.Days.Count == displayDays)
         {
             summary = new Summary(
-                State.LastSummary.Name,
-                State.LastSummary.Lat,
-                State.LastSummary.Lon,
-                State.LastSummary.Days
+                storedSummary.Name,
+                storedSummary.Lat,
+                storedSummary.Lon,
+                storedSummary.Days
                     .Select(day => new DayForecast(
                         day.Date,
                         day.Hours.Select(hour => new HourEntry(
@@ -244,7 +252,9 @@
                             hour.Wind,
                             hour.Prob,
                             hour.Mm)).ToList()))
-                    .ToList());
+                    .ToList(),
+                storedSummary.Current?.Time,
+                storedSummary.TimeZone);
             shouldPositionHourlyForecast = true;
         }
     }
@@ -261,7 +271,12 @@
         if (shouldPositionHourlyForecast && summary is not null)
         {
             shouldPositionHourlyForecast = false;
-            await JS.InvokeVoidAsync("weatherForecast.showCurrentHour", hourlyScroller);
+            var currentHourKey = summary.CurrentTime?.ToString(HourKeyFormat, CultureInfo.InvariantCulture);
+            await JS.InvokeVoidAsync(
+                "weatherForecast.showCurrentHour",
+                hourlyScroller,
+                currentHourKey,
+                summary.TimeZone);
         }
     }
 
@@ -427,7 +442,13 @@
                 return;
             }
 
-            summary = new Summary(name ?? requestedCity, lat, lon, daySummaries);
+            summary = new Summary(
+                name ?? requestedCity,
+                lat,
+                lon,
+                daySummaries,
+                forecast.Current?.Time,
+                forecast.TimeZone);
             selectedDayIndex = 0;
             shouldPositionHourlyForecast = true;
 
@@ -451,7 +472,8 @@
                         : new WeatherState.CurrentCondition(
                             forecast.Current.Time,
                             forecast.Current.Temperature,
-                            forecast.Current.Rainfall)));
+                            forecast.Current.Rainfall),
+                    forecast.TimeZone));
         }
         catch
         {

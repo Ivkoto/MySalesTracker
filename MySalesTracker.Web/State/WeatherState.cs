@@ -2,6 +2,8 @@ namespace MySalesTracker.Web.State;
 
 public sealed class WeatherState
 {
+    static readonly TimeSpan ForecastCacheLifetime = TimeSpan.FromMinutes(15);
+
     public string City { get; set; } = "Sofia";
     public int DisplayDays { get; set; } = 3;
     public Coordinates? CurrentLocation { get; set; }
@@ -16,9 +18,19 @@ public sealed class WeatherState
         double Lat,
         double Lon,
         List<DaySummary> Days,
-        CurrentCondition? Current = null);
+        CurrentCondition? Current = null,
+        string? TimeZone = null)
+    {
+        public DateTimeOffset CachedAtUtc { get; init; } = DateTimeOffset.UtcNow;
+    }
 
     public Summary? LastSummary { get; private set; }
+
+    public Summary? GetFreshSummary()
+        => LastSummary is not null
+            && LastSummary.CachedAtUtc >= DateTimeOffset.UtcNow - ForecastCacheLifetime
+                ? LastSummary
+                : null;
 
     public void Store(Summary? summary) => LastSummary = summary;
 }

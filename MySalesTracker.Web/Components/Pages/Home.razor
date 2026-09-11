@@ -141,9 +141,12 @@
     {
         try
         {
-            var currentHour = await GetLocalHour();
-            var currentDate = DateOnly.FromDateTime(currentHour);
-            var storedSummary = WeatherState.LastSummary;
+            var browserCurrentHour = await GetLocalHour();
+            var storedSummary = WeatherState.GetFreshSummary();
+            var cachedCurrentHour = storedSummary is null
+                ? browserCurrentHour
+                : GetForecastLocalTime(storedSummary, browserCurrentHour);
+            var currentDate = DateOnly.FromDateTime(cachedCurrentHour);
             var storedDay = storedSummary?.Days.FirstOrDefault(day => day.Date == currentDate);
 
             if (storedSummary is not null && storedDay is not null && storedDay.Hours.Count > 0)
@@ -162,7 +165,7 @@
                             storedSummary.Current.Time,
                             storedSummary.Current.Temp,
                             storedSummary.Current.Rainfall),
-                    currentHour);
+                    cachedCurrentHour);
                 return;
             }
 
@@ -196,29 +199,51 @@
                 return;
             }
 
-            var forecastHour = forecast.Current?.Time ?? currentHour;
+            var forecastHour = forecast.Current?.Time ?? browserCurrentHour;
             var forecastDate = DateOnly.FromDateTime(forecastHour);
             var forecastDays = forecast.Hours
                 .GroupBy(hour => DateOnly.FromDateTime(hour.Time))
                 .OrderBy(group => group.Key)
+                .Select(group => new WeatherState.DaySummary(
+                    group.Key,
+                    group.Select(hour => new WeatherState.HourEntry(
+                        hour.Time,
+                        hour.Temperature,
+                        hour.WindSpeed,
+                        hour.PrecipitationProbability,
+                        hour.Precipitation)).ToList()))
                 .ToList();
-            var forecastDay = forecastDays.FirstOrDefault(group => group.Key == forecastDate)
+            var forecastDay = forecastDays.FirstOrDefault(day => day.Date == forecastDate)
                 ?? forecastDays.First();
+            var currentConditions = forecast.Current is null
+                ? null
+                : new WeatherState.CurrentCondition(
+                    forecast.Current.Time,
+                    forecast.Current.Temperature,
+                    forecast.Current.Rainfall);
+
+            WeatherState.Store(new WeatherState.Summary(
+                locationName,
+                latitude,
+                longitude,
+                forecastDays,
+                currentConditions,
+                forecast.TimeZone));
 
             todayWeather = BuildOverview(
                 locationName,
-                forecastDay.Select(hour => new OverviewHour(
+                forecastDay.Hours.Select(hour => new OverviewHour(
                     hour.Time,
-                    hour.Temperature,
-                    hour.WindSpeed,
-                    hour.PrecipitationProbability,
-                    hour.Precipitation)),
-                forecast.Current is null
+                    hour.Temp,
+                    hour.Wind,
+                    hour.Prob,
+                    hour.Mm)),
+                currentConditions is null
                     ? null
                     : new OverviewCurrent(
-                        forecast.Current.Time,
-                        forecast.Current.Temperature,
-                        forecast.Current.Rainfall),
+                        currentConditions.Time,
+                        currentConditions.Temp,
+                        currentConditions.Rainfall),
                 forecastHour);
         }
         catch
@@ -253,6 +278,26 @@
         }
 
         return DateTime.Now;
+    }
+
+    static DateTime GetForecastLocalTime(WeatherState.Summary summary, DateTime fallback)
+    {
+        if (!string.IsNullOrWhiteSpace(summary.TimeZone))
+        {
+            try
+            {
+                var timeZone = TimeZoneInfo.FindSystemTimeZoneById(summary.TimeZone);
+                return TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone).DateTime;
+            }
+            catch (TimeZoneNotFoundException)
+            {
+            }
+            catch (InvalidTimeZoneException)
+            {
+            }
+        }
+
+        return summary.Current?.Time ?? fallback;
     }
 
     static TodayWeatherOverview BuildOverview(

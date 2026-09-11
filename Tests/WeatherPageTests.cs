@@ -30,6 +30,8 @@ public sealed class WeatherPageTests
             Assert.Equal(3, renderer.TabCount(page));
             Assert.Equal([3], weather.RequestedDays);
             Assert.Equal(1, js.HourScrollCalls);
+            Assert.Equal(["2026-09-06T14"], js.HourKeys);
+            Assert.Equal(["Europe/Sofia"], js.HourTimeZones);
         });
     }
 
@@ -318,6 +320,8 @@ public sealed class WeatherPageTests
         public Task<Weather.LocationResult>? PendingResult { get; set; }
         public int Calls { get; private set; }
         public int HourScrollCalls { get; private set; }
+        public List<string?> HourKeys { get; } = [];
+        public List<string?> HourTimeZones { get; } = [];
 
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
             => InvokeAsync<TValue>(identifier, CancellationToken.None, args);
@@ -327,6 +331,8 @@ public sealed class WeatherPageTests
             if (identifier == "weatherForecast.showCurrentHour")
             {
                 HourScrollCalls++;
+                HourKeys.Add(args?[1]?.ToString());
+                HourTimeZones.Add(args?[2]?.ToString());
                 return default!;
             }
 
@@ -376,7 +382,10 @@ public sealed class WeatherPageTests
             var hours = Enumerable.Range(0, forecastDays * 24)
                 .Select(hour => new HourlyForecast(start.AddHours(hour), 20, 5, 25, 0.8))
                 .ToList();
-            return new WeatherForecast(hours);
+            return new WeatherForecast(
+                hours,
+                new CurrentWeather(start.AddHours(14), 20, 0),
+                "Europe/Sofia");
         }
     }
 
