@@ -1,27 +1,347 @@
 @page "/"
 @page "/home"
 @attribute [Authorize]
+@inject IWeatherService WeatherSvc
+@inject WeatherState WeatherState
+@inject IJSRuntime JS
+@implements IDisposable
 
 <PageTitle>Home</PageTitle>
 
 <div class="home-page text-center">
-    <img class="home-logo" src="images/logo01_retina.png" alt="Home image" />
+    <img class="home-logo" src="images/logo01_retina.png" alt="TOTEM" />
     <div class="home-actions">
-        <div class="home-button-container">
-            <NavLink class="home-nav-button" href="weather">
-                <h3>Дали Вали?<br /> ⛈️ ⛵ 💼 💦 👀</h3>
-            </NavLink>
-        </div>
         <div class="home-button-container">
             <NavLink class="home-nav-button" href="events">
                 <h3>Ще се работи!<br /> 🤞 🏄‍♀️ 📋</h3>
             </NavLink>
         </div>
     </div>
+
+    <section class="home-weather-section" aria-labelledby="home-weather-title">
+        @if (isWeatherLoading)
+        {
+            <div class="home-weather-card home-weather-loading" aria-busy="true">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <div>
+                    <h2 id="home-weather-title">Времето днес</h2>
+                    <span>Зареждане на прогнозата...</span>
+                </div>
+            </div>
+        }
+        else if (todayWeather is not null)
+        {
+            <NavLink class="home-weather-card" href="weather">
+                <div class="home-weather-card-header">
+                    <h2 id="home-weather-title">Времето днес</h2>
+                    <span class="home-weather-location">
+                        <span class="bi bi-geo-alt-fill" aria-hidden="true"></span>
+                        @todayWeather.Location
+                        <span class="bi bi-chevron-right home-weather-chevron" aria-hidden="true"></span>
+                    </span>
+                </div>
+
+                <div class="home-weather-main">
+                    <div class="home-weather-condition">
+                        <span class="home-weather-icon bi @todayWeather.Icon" aria-hidden="true"></span>
+                        <div>
+                            <strong>@todayWeather.RainStatus</strong>
+                            <span>@todayWeather.RainDetail</span>
+                        </div>
+                    </div>
+                    <div class="home-weather-current">
+                        <strong>@FormatTemperature(todayWeather.CurrentTemperature)</strong>
+                        <span>
+                            <span class="visually-hidden">Минимална </span>@FormatTemperature(todayWeather.MinimumTemperature) /
+                            <span class="visually-hidden">максимална </span>@FormatTemperature(todayWeather.MaximumTemperature)
+                        </span>
+                        <span class="home-weather-wind">
+                            <span class="bi bi-wind" aria-hidden="true"></span>
+                            @($"{FormatWind(todayWeather.CurrentWind)} km/h")
+                        </span>
+                    </div>
+                </div>
+
+                <div class="home-weather-periods" aria-label="Температура през деня">
+                    @foreach (var period in todayWeather.Periods)
+                    {
+                        <div class="home-weather-period">
+                            <span>@period.Label</span>
+                            <strong>@FormatTemperature(period.Temperature)</strong>
+                            <small>@period.Time</small>
+                        </div>
+                    }
+                </div>
+
+            </NavLink>
+        }
+        else
+        {
+            <NavLink class="home-weather-card home-weather-unavailable"
+                     href="weather">
+                <span class="home-weather-icon bi bi-cloud-slash" aria-hidden="true"></span>
+                <div>
+                    <h2 id="home-weather-title">Времето днес</h2>
+                    <span>Прогнозата не е налична. Отвори подробната страница.</span>
+                </div>
+                <span class="bi bi-chevron-right" aria-hidden="true"></span>
+            </NavLink>
+        }
+    </section>
+
     <div class="home-image-container">
-        <img class="home-image" src="images/kuker1000.png" alt="Home image" />
+        <img class="home-image" src="images/kuker1000.png" alt="Кукер" />
     </div>
 </div>
+
+@code {
+    const double RainThresholdMm = 0.1;
+    const int PossibleRainProbability = 30;
+    const string HourKeyFormat = "yyyy-MM-ddTHH";
+    static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+
+    TodayWeatherOverview? todayWeather;
+    bool isWeatherLoading = true;
+    bool isDisposed;
+
+    sealed record OverviewHour(
+        DateTime Time,
+        double Temperature,
+        double Wind,
+        int RainProbability,
+        double Rainfall);
+    sealed record OverviewCurrent(DateTime Time, double Temperature, double Rainfall);
+    sealed record PeriodTemperature(string Label, string Time, double Temperature);
+    sealed record TodayWeatherOverview(
+        string Location,
+        double CurrentTemperature,
+        double CurrentWind,
+        double MinimumTemperature,
+        double MaximumTemperature,
+        string RainStatus,
+        string RainDetail,
+        string Icon,
+        IReadOnlyList<PeriodTemperature> Periods);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await LoadTodayWeather();
+        if (!isDisposed)
+        {
+            StateHasChanged();
+        }
+    }
+
+    async Task LoadTodayWeather()
+    {
+        try
+        {
+            var currentHour = await GetLocalHour();
+            var currentDate = DateOnly.FromDateTime(currentHour);
+            var storedSummary = WeatherState.LastSummary;
+            var storedDay = storedSummary?.Days.FirstOrDefault(day => day.Date == currentDate);
+
+            if (storedSummary is not null && storedDay is not null && storedDay.Hours.Count > 0)
+            {
+                todayWeather = BuildOverview(
+                    storedSummary.Name,
+                    storedDay.Hours.Select(hour => new OverviewHour(
+                        hour.Time,
+                        hour.Temp,
+                        hour.Wind,
+                        hour.Prob,
+                        hour.Mm)),
+                    storedSummary.Current is null
+                        ? null
+                        : new OverviewCurrent(
+                            storedSummary.Current.Time,
+                            storedSummary.Current.Temp,
+                            storedSummary.Current.Rainfall),
+                    currentHour);
+                return;
+            }
+
+            double latitude;
+            double longitude;
+            string locationName;
+
+            if (WeatherState.CurrentLocation is { } currentLocation)
+            {
+                latitude = currentLocation.Latitude;
+                longitude = currentLocation.Longitude;
+                locationName = storedSummary?.Name ?? WeatherState.City;
+            }
+            else
+            {
+                var requestedCity = WeatherState.City.Trim();
+                var geocode = await WeatherSvc.FetchGeocode(requestedCity);
+                if (geocode is null || isDisposed)
+                {
+                    return;
+                }
+
+                latitude = geocode.Value.lat;
+                longitude = geocode.Value.lon;
+                locationName = geocode.Value.name ?? requestedCity;
+            }
+
+            var forecast = await WeatherSvc.GetForecast(latitude, longitude, 1);
+            if (forecast?.Hours.Count is not > 0 || isDisposed)
+            {
+                return;
+            }
+
+            var forecastHour = forecast.Current?.Time ?? currentHour;
+            var forecastDate = DateOnly.FromDateTime(forecastHour);
+            var forecastDays = forecast.Hours
+                .GroupBy(hour => DateOnly.FromDateTime(hour.Time))
+                .OrderBy(group => group.Key)
+                .ToList();
+            var forecastDay = forecastDays.FirstOrDefault(group => group.Key == forecastDate)
+                ?? forecastDays.First();
+
+            todayWeather = BuildOverview(
+                locationName,
+                forecastDay.Select(hour => new OverviewHour(
+                    hour.Time,
+                    hour.Temperature,
+                    hour.WindSpeed,
+                    hour.PrecipitationProbability,
+                    hour.Precipitation)),
+                forecast.Current is null
+                    ? null
+                    : new OverviewCurrent(
+                        forecast.Current.Time,
+                        forecast.Current.Temperature,
+                        forecast.Current.Rainfall),
+                forecastHour);
+        }
+        catch
+        {
+        }
+        finally
+        {
+            isWeatherLoading = false;
+        }
+    }
+
+    async Task<DateTime> GetLocalHour()
+    {
+        try
+        {
+            var hourKey = await JS.InvokeAsync<string>("weatherForecast.getCurrentHourKey");
+            if (DateTime.TryParseExact(
+                hourKey,
+                HourKeyFormat,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var localHour))
+            {
+                return localHour;
+            }
+        }
+        catch (JSException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+
+        return DateTime.Now;
+    }
+
+    static TodayWeatherOverview BuildOverview(
+        string location,
+        IEnumerable<OverviewHour> hours,
+        OverviewCurrent? currentConditions,
+        DateTime currentHour)
+    {
+        var orderedHours = hours.OrderBy(hour => hour.Time).ToList();
+        var current = orderedHours.FirstOrDefault(hour => hour.Time.Hour == currentHour.Hour)
+            ?? orderedHours.MinBy(hour => Math.Abs((hour.Time.TimeOfDay - currentHour.TimeOfDay).TotalMinutes))!;
+        var currentConditionsForHour = currentConditions is not null
+            && currentConditions.Time.Date == current.Time.Date
+            && currentConditions.Time.Hour == current.Time.Hour
+                ? currentConditions
+                : null;
+        var remainingHours = orderedHours.Where(hour => hour.Time > current.Time).ToList();
+        var nextRain = remainingHours.FirstOrDefault(hour => hour.Rainfall >= RainThresholdMm);
+        var maximumRainProbability = remainingHours.Count == 0
+            ? 0
+            : remainingHours.Max(hour => hour.RainProbability);
+        var remainingRainfall = remainingHours.Sum(hour => hour.Rainfall);
+        var rainedEarlier = orderedHours.Any(hour =>
+            hour.Time <= current.Time && hour.Rainfall >= RainThresholdMm);
+
+        string rainStatus;
+        string rainDetail;
+        string icon;
+
+        if (currentConditionsForHour?.Rainfall >= RainThresholdMm)
+        {
+            rainStatus = "Вали в момента";
+            rainDetail = $"{FormatRainfall(currentConditionsForHour.Rainfall)} mm в момента";
+            icon = "bi-cloud-rain-heavy-fill";
+        }
+        else if (nextRain is not null)
+        {
+            rainStatus = $"Дъжд около {nextRain.Time:HH:mm}";
+            rainDetail = $"До {Math.Clamp(maximumRainProbability, 0, 100)}% · {FormatRainfall(remainingRainfall)} mm";
+            icon = "bi-cloud-rain-fill";
+        }
+        else if (maximumRainProbability >= PossibleRainProbability)
+        {
+            rainStatus = "Възможен дъжд по-късно";
+            rainDetail = $"Вероятност до {Math.Clamp(maximumRainProbability, 0, 100)}%";
+            icon = "bi-cloud-drizzle-fill";
+        }
+        else
+        {
+            rainStatus = rainedEarlier ? "Без повече валежи днес" : "Не се очаква дъжд";
+            rainDetail = $"Вероятност до {Math.Clamp(maximumRainProbability, 0, 100)}%";
+            icon = "bi-cloud";
+        }
+
+        var periods = new[]
+        {
+            CreatePeriod("Сутрин", "08:00", 8, orderedHours),
+            CreatePeriod("Следобед", "14:00", 14, orderedHours),
+            CreatePeriod("Вечер", "20:00", 20, orderedHours)
+        };
+
+        return new TodayWeatherOverview(
+            string.IsNullOrWhiteSpace(location) ? "Избраното място" : location,
+            currentConditionsForHour?.Temperature ?? current.Temperature,
+            current.Wind,
+            orderedHours.Min(hour => hour.Temperature),
+            orderedHours.Max(hour => hour.Temperature),
+            rainStatus,
+            rainDetail,
+            icon,
+            periods);
+    }
+
+    static PeriodTemperature CreatePeriod(
+        string label,
+        string time,
+        int targetHour,
+        IReadOnlyList<OverviewHour> hours)
+    {
+        var closest = hours.MinBy(hour => Math.Abs(hour.Time.Hour - targetHour))!;
+        return new PeriodTemperature(label, time, closest.Temperature);
+    }
+
+    static string FormatTemperature(double value) => $"{value.ToString("0.#", Bg)}°";
+    static string FormatRainfall(double value) => value.ToString("0.#", Bg);
+    static string FormatWind(double value) => value.ToString("0.#", Bg);
+
+    public void Dispose() => isDisposed = true;
+}
 
 @*Inline styles in component files should be moved to a separate CSS file or CSS
 isolation file (Home.razor.css)to follow Blazor best practices and improve maintainability.
@@ -29,23 +349,25 @@ For some reason if we did this, it breaks the style!*@
 <style>
     .home-page {
         display: grid;
-        grid-template-rows: minmax(0, 0.8fr) auto minmax(0, 1.2fr);
+        grid-template-rows: repeat(4, auto);
+        align-content: space-evenly;
+        gap: clamp(0.65rem, 1.5dvh, 1rem);
         min-block-size: calc(100dvh - 4.6rem);
     }
 
     .home-logo {
         align-self: start;
         display: block;
-        width: 100%;
-        max-width: 24rem;
+        width: 65%;
+        max-width: 15.6rem;
         height: auto;
         justify-self: center;
-        margin-block-start: 1rem;
+        margin-block-start: clamp(0.25rem, 1dvh, 0.75rem);
     }
 
     .home-actions {
         display: grid;
-        gap: 1.5rem;
+        gap: clamp(0.65rem, 1.4dvh, 1rem);
     }
 
     .home-button-container {
@@ -56,11 +378,11 @@ For some reason if we did this, it breaks the style!*@
 
     .home-nav-button {
         display: block;
-        padding: 1.5rem 1.5rem;
+        padding: clamp(1rem, 2.25dvh, 1.35rem) 1.5rem;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-radius: 1rem;
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
-        transition: all 0.3s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         text-decoration: none;
         color: white;
     }
@@ -78,9 +400,199 @@ For some reason if we did this, it breaks the style!*@
         font-weight: 300;
     }
 
+    .home-weather-section {
+        width: 100%;
+        max-width: 36rem;
+        margin: 0 auto;
+        text-align: left;
+    }
+
+    .home-weather-card {
+        box-sizing: border-box;
+        display: block;
+        width: 100%;
+        padding: clamp(0.9rem, 2dvh, 1.15rem);
+        border: 0.0625rem solid #cdddea;
+        border-radius: 1rem;
+        color: #172536;
+        background: linear-gradient(135deg, #f4f9ff 0%, #f8f5ff 100%);
+        box-shadow: 0 0.35rem 1rem rgba(23, 71, 110, 0.12);
+        text-decoration: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .home-weather-card:hover,
+    .home-weather-card:focus-visible {
+        color: #172536;
+        transform: translateY(-0.15rem);
+        box-shadow: 0 0.55rem 1.35rem rgba(23, 71, 110, 0.18);
+        outline: none;
+    }
+
+    .home-weather-card:focus-visible {
+        box-shadow: 0 0 0 0.2rem rgba(27, 110, 194, 0.24), 0 0.55rem 1.35rem rgba(23, 71, 110, 0.18);
+    }
+
+    .home-weather-card-header,
+    .home-weather-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .home-weather-card h2 {
+        margin: 0;
+        color: #4e6173;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .home-weather-location {
+        display: inline-flex;
+        align-items: center;
+        min-width: 0;
+        color: #5d6d7d;
+        font-size: 0.82rem;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .home-weather-location .bi {
+        flex: 0 0 auto;
+        margin-right: 0.25rem;
+        color: #1769aa;
+    }
+
+    .home-weather-location .home-weather-chevron {
+        margin-right: 0;
+        margin-left: 0.35rem;
+        font-size: 0.65rem;
+    }
+
+    .home-weather-main {
+        margin-top: 0.65rem;
+    }
+
+    .home-weather-condition {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        gap: 0.65rem;
+    }
+
+    .home-weather-condition > div {
+        display: grid;
+        min-width: 0;
+    }
+
+    .home-weather-icon {
+        flex: 0 0 auto;
+        color: #1769aa;
+        font-size: 2.2rem;
+        line-height: 1;
+    }
+
+    .home-weather-condition strong {
+        font-size: 1rem;
+        line-height: 1.2;
+    }
+
+    .home-weather-condition span:not(.home-weather-icon) {
+        margin-top: 0.15rem;
+        color: #607184;
+        font-size: 0.76rem;
+    }
+
+    .home-weather-current {
+        display: grid;
+        flex: 0 0 auto;
+        justify-items: end;
+        line-height: 1;
+    }
+
+    .home-weather-current strong {
+        font-size: 2.1rem;
+        font-weight: 650;
+        letter-spacing: -0.04em;
+    }
+
+    .home-weather-current > span {
+        margin-top: 0.25rem;
+        color: #607184;
+        font-size: 0.75rem;
+    }
+
+    .home-weather-current .home-weather-wind {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-top: 0.35rem;
+        color: #526b43;
+        font-weight: 650;
+    }
+
+    .home-weather-wind .bi {
+        font-size: 0.8rem;
+        line-height: 1;
+    }
+
+    .home-weather-periods {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 0.75rem;
+        border-block: 0.0625rem solid rgba(87, 117, 143, 0.18);
+    }
+
+    .home-weather-period {
+        display: grid;
+        justify-items: center;
+        padding: 0.55rem 0.25rem;
+    }
+
+    .home-weather-period + .home-weather-period {
+        border-inline-start: 0.0625rem solid rgba(87, 117, 143, 0.18);
+    }
+
+    .home-weather-period span,
+    .home-weather-period small {
+        color: #607184;
+        font-size: 0.7rem;
+    }
+
+    .home-weather-period strong {
+        margin: 0.1rem 0;
+        font-size: 1rem;
+    }
+
+    .home-weather-loading,
+    .home-weather-unavailable {
+        display: flex;
+        align-items: center;
+        min-height: 5.25rem;
+        gap: 0.8rem;
+    }
+
+    .home-weather-loading > div,
+    .home-weather-unavailable > div {
+        display: grid;
+        flex: 1;
+        gap: 0.25rem;
+    }
+
+    .home-weather-loading span,
+    .home-weather-unavailable span {
+        color: #607184;
+        font-size: 0.82rem;
+    }
+
     .home-image-container {
         align-self: end;
-        max-width: 15rem;
+        max-width: clamp(9rem, 22dvh, 15rem);
         justify-self: center;
     }
 
@@ -95,6 +607,34 @@ For some reason if we did this, it breaks the style!*@
         display: block;
         width: 100%;
         height: auto;
+    }
+
+    @@media (max-width: 24rem) {
+        .home-weather-card {
+            padding-inline: 0.75rem;
+        }
+
+        .home-weather-icon {
+            font-size: 1.8rem;
+        }
+
+        .home-weather-current strong {
+            font-size: 1.8rem;
+        }
+    }
+
+    @@media (max-height: 48rem) and (max-width: 40rem) {
+        .home-page {
+            gap: 0.5rem;
+        }
+
+        .home-nav-button {
+            padding-block: 0.85rem;
+        }
+
+        .home-image-container {
+            max-width: 8rem;
+        }
     }
 
     @@media (min-width: 641px) {

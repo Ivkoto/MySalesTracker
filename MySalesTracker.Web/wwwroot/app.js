@@ -49,3 +49,39 @@ window.weatherLocation = {
     }
 };
 
+window.weatherForecast = {
+    getCurrentHourKey: function () {
+        const pad = function (value) { return String(value).padStart(2, "0"); };
+        const now = new Date();
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}`;
+    },
+
+    showCurrentHour: function (scroller) {
+        if (!scroller) {
+            return false;
+        }
+
+        const currentHour = window.weatherForecast.getCurrentHourKey();
+        const items = Array.from(scroller.querySelectorAll(".hour-item"));
+
+        for (const item of items) {
+            item.classList.remove("hour-item-current");
+            item.removeAttribute("aria-current");
+        }
+
+        const currentItem = items.find(function (item) {
+            return item.dataset.forecastHour === currentHour;
+        });
+
+        if (!currentItem) {
+            scroller.scrollLeft = 0;
+            return false;
+        }
+
+        currentItem.classList.add("hour-item-current");
+        currentItem.setAttribute("aria-current", "time");
+        scroller.scrollLeft += currentItem.getBoundingClientRect().left - scroller.getBoundingClientRect().left;
+        return true;
+    }
+};
+

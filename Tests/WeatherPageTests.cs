@@ -18,7 +18,8 @@ public sealed class WeatherPageTests
     {
         var state = new WeatherState();
         var weather = new WeatherServiceFake();
-        await using var services = CreateServices(state, weather);
+        var js = new LocationJsFake();
+        await using var services = CreateServices(state, weather, js);
         await using var renderer = new WeatherRenderer(services);
 
         await renderer.Dispatcher.InvokeAsync(async () =>
@@ -28,6 +29,7 @@ public sealed class WeatherPageTests
             Assert.Equal(3, renderer.SelectedCount(page));
             Assert.Equal(3, renderer.TabCount(page));
             Assert.Equal([3], weather.RequestedDays);
+            Assert.Equal(1, js.HourScrollCalls);
         });
     }
 
@@ -36,7 +38,8 @@ public sealed class WeatherPageTests
     {
         var state = new WeatherState();
         var weather = new WeatherServiceFake();
-        await using var services = CreateServices(state, weather);
+        var js = new LocationJsFake();
+        await using var services = CreateServices(state, weather, js);
         await using var renderer = new WeatherRenderer(services);
 
         await renderer.Dispatcher.InvokeAsync(async () =>
@@ -53,6 +56,7 @@ public sealed class WeatherPageTests
             Assert.Equal(5, renderer.TabCount(returnedPage));
             Assert.Equal([3, 5], weather.RequestedDays);
             Assert.Equal(3, new WeatherState().DisplayDays);
+            Assert.Equal(3, js.HourScrollCalls);
         });
     }
 
@@ -313,12 +317,19 @@ public sealed class WeatherPageTests
         public Weather.LocationResult Result { get; set; } = new(45.123456, 12.345678, null, "София");
         public Task<Weather.LocationResult>? PendingResult { get; set; }
         public int Calls { get; private set; }
+        public int HourScrollCalls { get; private set; }
 
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
             => InvokeAsync<TValue>(identifier, CancellationToken.None, args);
 
         public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
+            if (identifier == "weatherForecast.showCurrentHour")
+            {
+                HourScrollCalls++;
+                return default!;
+            }
+
             Assert.Equal("weatherLocation.getCurrent", identifier);
             Calls++;
             var result = PendingResult is null ? Result : await PendingResult;

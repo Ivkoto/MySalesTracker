@@ -144,6 +144,7 @@
             </div>
 
             <div class="hourly-scroller"
+                 @ref="hourlyScroller"
                  tabindex="0"
                  aria-label="Почасова прогноза за @FormatDayHeading(selectedDay.Date)">
                 <div class="hourly-track">
@@ -153,7 +154,8 @@
                         var rainProbability = Math.Clamp(hour.Prob, 0, 100);
                         var rainfallPercent = Math.Clamp(hour.Mm / WeatherCalculations.RainfallScaleMaxMm, 0, 1) * 100;
 
-                        <article class="hour-item">
+                        <article class="hour-item"
+                                 data-forecast-hour="@hour.Time.ToString("yyyy-MM-ddTHH", CultureInfo.InvariantCulture)">
                             <time class="hour-time"
                                   datetime="@hour.Time.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture)">
                                 @hour.Time.ToString("HH:mm", CultureInfo.InvariantCulture)
@@ -196,6 +198,8 @@
     bool isLoading;
     bool isLocating;
     bool isDisposed;
+    bool shouldPositionHourlyForecast;
+    ElementReference hourlyScroller;
     bool IsBusy => isLoading || isLocating;
 
     public sealed record LocationResult(double Latitude, double Longitude, string? Error, string? City = null);
@@ -241,6 +245,7 @@
                             hour.Prob,
                             hour.Mm)).ToList()))
                     .ToList());
+            shouldPositionHourlyForecast = true;
         }
     }
 
@@ -250,6 +255,13 @@
         {
             await Load();
             StateHasChanged();
+            return;
+        }
+
+        if (shouldPositionHourlyForecast && summary is not null)
+        {
+            shouldPositionHourlyForecast = false;
+            await JS.InvokeVoidAsync("weatherForecast.showCurrentHour", hourlyScroller);
         }
     }
 
@@ -417,6 +429,7 @@
 
             summary = new Summary(name ?? requestedCity, lat, lon, daySummaries);
             selectedDayIndex = 0;
+            shouldPositionHourlyForecast = true;
 
             State.Store(
                 new WeatherState.Summary(
@@ -432,7 +445,13 @@
                                 hour.Wind,
                                 hour.Prob,
                                 hour.Mm)).ToList()))
-                        .ToList()));
+                        .ToList(),
+                    forecast.Current is null
+                        ? null
+                        : new WeatherState.CurrentCondition(
+                            forecast.Current.Time,
+                            forecast.Current.Temperature,
+                            forecast.Current.Rainfall)));
         }
         catch
         {
@@ -454,6 +473,7 @@
         }
 
         selectedDayIndex = index;
+        shouldPositionHourlyForecast = true;
     }
 
     static string GetDayTabName(DateOnly date)
