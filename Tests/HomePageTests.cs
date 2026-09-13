@@ -12,6 +12,10 @@ namespace MySalesTracker.Tests;
 
 public sealed class HomePageTests
 {
+    static readonly DateTime ForecastDate = TimeZoneInfo.ConvertTime(
+        DateTimeOffset.UtcNow,
+        TimeZoneInfo.FindSystemTimeZoneById("Europe/Sofia")).Date;
+
     [Fact]
     public async Task NewSession_ShowsCurrentRainAndDayTemperatures()
     {
@@ -31,6 +35,12 @@ public sealed class HomePageTests
             Assert.Contains("18°", text);
             Assert.Contains("30°", text);
             Assert.Contains("5 km/h", text);
+            Assert.DoesNotContain("🤞", text);
+            Assert.DoesNotContain("🏄‍♀️", text);
+            Assert.DoesNotContain("📋", text);
+            Assert.Contains(
+                "Ще се работи! Отвори събитията.",
+                renderer.RootAttributeValues(page, "aria-label"));
             Assert.Equal(["events", "weather"], renderer.RootAttributeValues(page, "href"));
             Assert.Equal(["Sofia"], weather.RequestedCities);
             Assert.Equal([1], weather.RequestedDays);
@@ -186,7 +196,7 @@ public sealed class HomePageTests
     static List<HourlyForecast> CreateHours()
         => Enumerable.Range(0, 24)
             .Select(hour => new HourlyForecast(
-                new DateTime(2026, 9, 11, hour, 0, 0),
+                ForecastDate.AddHours(hour),
                 10 + hour,
                 5,
                 hour >= 14 ? 60 : 10,
@@ -209,7 +219,7 @@ public sealed class HomePageTests
             RequestedDays.Add(forecastDays);
             return Task.FromResult<WeatherForecast?>(new WeatherForecast(
                 CreateHours(),
-                new CurrentWeather(new DateTime(2026, 9, 11, 14, 0, 0), 24, 0.4),
+                new CurrentWeather(ForecastDate.AddHours(14), 24, 0.4),
                 "Europe/Sofia"));
         }
     }
@@ -225,7 +235,7 @@ public sealed class HomePageTests
             object?[]? args)
         {
             Assert.Equal("weatherForecast.getCurrentHourKey", identifier);
-            return ValueTask.FromResult((TValue)(object)"2026-09-11T14");
+            return ValueTask.FromResult((TValue)(object)$"{ForecastDate:yyyy-MM-dd}T14");
         }
     }
 

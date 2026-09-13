@@ -1,0 +1,164 @@
+.cash-deposit-illustration {
+    display: block;
+    width: 100%;
+    height: clamp(5.25rem, 13dvh, 7rem);
+    overflow: visible;
+}
+
+.cash-deposit-safe-glow {
+    fill: #dff7ff;
+    opacity: 0.08;
+}
+
+.cash-deposit-carrier-track {
+    animation: cash-deposit-approach 5.6s ease-in-out infinite;
+}
+
+.cash-deposit-bag-deposit {
+    animation: cash-deposit-bag-away 5.6s ease-in-out infinite;
+}
+
+.cash-deposit-bag-bob {
+    animation: cash-deposit-bag-bob 0.55s ease-in-out infinite alternate;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.cash-deposit-leg,
+.cash-deposit-arm {
+    transform-box: fill-box;
+    transform-origin: top center;
+}
+
+.cash-deposit-leg-front,
+.cash-deposit-arm {
+    animation: cash-deposit-step-front 0.55s ease-in-out infinite alternate;
+}
+
+.cash-deposit-leg-back {
+    animation: cash-deposit-step-back 0.55s ease-in-out infinite alternate;
+}
+
+.cash-deposit-safe-door {
+    animation: cash-deposit-door 5.6s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: right center;
+}
+
+.cash-deposit-safe-light {
+    animation: cash-deposit-light 5.6s ease-in-out infinite;
+}
+
+.cash-deposit-note {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.cash-deposit-note-one {
+    animation: cash-deposit-note-one 5.6s ease-in-out infinite;
+}
+
+.cash-deposit-note-two {
+    animation: cash-deposit-note-two 5.6s ease-in-out infinite;
+}
+
+@keyframes cash-deposit-approach {
+    0%, 8% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    64%, 87% {
+        opacity: 1;
+        transform: translateX(145px);
+    }
+    92% {
+        opacity: 0;
+        transform: translateX(145px);
+    }
+    93% {
+        opacity: 0;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes cash-deposit-bag-away {
+    0%, 65% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    76%, 93% {
+        opacity: 0;
+        transform: translate(34px, 17px) scale(0.35);
+    }
+    94%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes cash-deposit-bag-bob {
+    from { transform: rotate(-3deg) translateY(-1px); }
+    to { transform: rotate(3deg) translateY(2px); }
+}
+
+@keyframes cash-deposit-step-front {
+    from { transform: rotate(-14deg); }
+    to { transform: rotate(14deg); }
+}
+
+@keyframes cash-deposit-step-back {
+    from { transform: rotate(14deg); }
+    to { transform: rotate(-14deg); }
+}
+
+@keyframes cash-deposit-door {
+    0%, 53%, 94%, 100% { transform: scaleX(1); }
+    66%, 86% { transform: scaleX(0.22); }
+}
+
+@keyframes cash-deposit-light {
+    0%, 56%, 91%, 100% { fill: #66ef9b; opacity: 0.75; }
+    65%, 84% { fill: #ffe27a; opacity: 1; }
+}
+
+@keyframes cash-deposit-note-one {
+    0%, 64% { opacity: 0; transform: translate(-18px, 8px) rotate(-12deg); }
+    70% { opacity: 1; }
+    82% { opacity: 1; transform: translate(11px, 4px) rotate(5deg); }
+    87%, 100% { opacity: 0; transform: translate(19px, 4px) scale(0.6); }
+}
+
+@keyframes cash-deposit-note-two {
+    0%, 68% { opacity: 0; transform: translate(-15px, -5px) rotate(10deg); }
+    74% { opacity: 1; }
+    84% { opacity: 1; transform: translate(10px, -1px) rotate(-4deg); }
+    89%, 100% { opacity: 0; transform: translate(17px, -1px) scale(0.6); }
+}
+
+@media (max-height: 48rem) and (max-width: 40rem) {
+    .cash-deposit-illustration {
+        height: 4.8rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cash-deposit-carrier-track {
+        animation: none;
+        transform: translateX(116px);
+    }
+
+    .cash-deposit-bag-deposit,
+    .cash-deposit-bag-bob,
+    .cash-deposit-leg,
+    .cash-deposit-arm,
+    .cash-deposit-safe-door,
+    .cash-deposit-safe-light,
+    .cash-deposit-note {
+        animation: none;
+    }
+}
