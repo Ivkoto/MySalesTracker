@@ -12,8 +12,11 @@
     <img class="home-logo" src="images/logo01_retina.png" alt="TOTEM" />
     <div class="home-actions">
         <div class="home-button-container">
-            <NavLink class="home-nav-button" href="events">
-                <h3>Ще се работи!<br /> 🤞 🏄‍♀️ 📋</h3>
+            <NavLink class="home-nav-button"
+                     href="events"
+                     aria-label="Ще се работи! Отвори събитията."
+                     title="Ще се работи!">
+                <CashDepositIllustration />
             </NavLink>
         </div>
     </div>
@@ -422,8 +425,11 @@ For some reason if we did this, it breaks the style!*@
     }
 
     .home-nav-button {
-        display: block;
-        padding: clamp(1rem, 2.25dvh, 1.35rem) 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        padding: clamp(0.35rem, 0.8dvh, 0.6rem) clamp(0.75rem, 3vw, 1.5rem);
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-radius: 1rem;
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
@@ -438,11 +444,6 @@ For some reason if we did this, it breaks the style!*@
         box-shadow: 0 0.7rem 1.6rem rgba(0, 0, 0, 0.3);
         background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
         outline: none;
-    }
-
-    .home-nav-button h3 {
-        margin: 0;
-        font-weight: 300;
     }
 
     .home-weather-section {
@@ -674,7 +675,7 @@ For some reason if we did this, it breaks the style!*@
         }
 
         .home-nav-button {
-            padding-block: 0.85rem;
+            padding-block: 0.35rem;
         }
 
         .home-image-container {

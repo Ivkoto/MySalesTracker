@@ -12,6 +12,10 @@ namespace MySalesTracker.Tests;
 
 public sealed class HomePageTests
 {
+    static readonly DateTime ForecastDate = TimeZoneInfo.ConvertTime(
+        DateTimeOffset.UtcNow,
+        TimeZoneInfo.FindSystemTimeZoneById("Europe/Sofia")).Date;
+
     [Fact]
     public async Task NewSession_ShowsCurrentRainAndDayTemperatures()
     {
@@ -31,6 +35,12 @@ public sealed class HomePageTests
             Assert.Contains("18°", text);
             Assert.Contains("30°", text);
             Assert.Contains("5 km/h", text);
+            Assert.DoesNotContain("🤞", text);
+            Assert.DoesNotContain("🏄‍♀️", text);
+            Assert.DoesNotContain("📋", text);
+            Assert.Contains(
+                "Ще се работи! Отвори събитията.",
+                renderer.RootAttributeValues(page, "aria-label"));
             Assert.Equal(["events", "weather"], renderer.RootAttributeValues(page, "href"));
             Assert.Equal(["Sofia"], weather.RequestedCities);
             Assert.Equal([1], weather.RequestedDays);
@@ -46,7 +56,7 @@ public sealed class HomePageTests
             42.1,
             24.7,
             [new WeatherState.DaySummary(
-                new DateOnly(2026, 9, 11),
+                DateOnly.FromDateTime(ForecastDate),
                 CreateHours()
                     .Select(hour => new WeatherState.HourEntry(
                         hour.Time,
@@ -55,7 +65,7 @@ public sealed class HomePageTests
                         hour.PrecipitationProbability,
                         hour.Time.Hour == 17 ? 0.8 : 0))
                     .ToList())],
-            new WeatherState.CurrentCondition(new DateTime(2026, 9, 11, 10, 0, 0), 20, 0)));
+            new WeatherState.CurrentCondition(ForecastDate.AddHours(10), 21.5, 0)));
         var weather = new WeatherServiceFake();
         await using var services = CreateServices(state, weather);
         await using var renderer = new HomeRenderer(services);
@@ -67,7 +77,7 @@ public sealed class HomePageTests
 
             Assert.Contains("Пловдив", text);
             Assert.Contains("Дъжд около 17:00", text);
-            Assert.Contains("20°", text);
+            Assert.Contains("21,5°", text);
             Assert.DoesNotContain("Вали в момента", text);
             Assert.Empty(weather.RequestedCities);
             Assert.Empty(weather.RequestedDays);
@@ -186,7 +196,7 @@ public sealed class HomePageTests
     static List<HourlyForecast> CreateHours()
         => Enumerable.Range(0, 24)
             .Select(hour => new HourlyForecast(
-                new DateTime(2026, 9, 11, hour, 0, 0),
+                ForecastDate.AddHours(hour),
                 10 + hour,
                 5,
                 hour >= 14 ? 60 : 10,
@@ -209,7 +219,7 @@ public sealed class HomePageTests
             RequestedDays.Add(forecastDays);
             return Task.FromResult<WeatherForecast?>(new WeatherForecast(
                 CreateHours(),
-                new CurrentWeather(new DateTime(2026, 9, 11, 14, 0, 0), 24, 0.4),
+                new CurrentWeather(ForecastDate.AddHours(14), 24, 0.4),
                 "Europe/Sofia"));
         }
     }
@@ -225,7 +235,7 @@ public sealed class HomePageTests
             object?[]? args)
         {
             Assert.Equal("weatherForecast.getCurrentHourKey", identifier);
-            return ValueTask.FromResult((TValue)(object)"2026-09-11T14");
+            return ValueTask.FromResult((TValue)(object)$"{ForecastDate:yyyy-MM-dd}T14");
         }
     }
 
