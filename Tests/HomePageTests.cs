@@ -56,7 +56,7 @@ public sealed class HomePageTests
             42.1,
             24.7,
             [new WeatherState.DaySummary(
-                new DateOnly(2026, 9, 11),
+                DateOnly.FromDateTime(ForecastDate),
                 CreateHours()
                     .Select(hour => new WeatherState.HourEntry(
                         hour.Time,
@@ -65,7 +65,7 @@ public sealed class HomePageTests
                         hour.PrecipitationProbability,
                         hour.Time.Hour == 17 ? 0.8 : 0))
                     .ToList())],
-            new WeatherState.CurrentCondition(new DateTime(2026, 9, 11, 10, 0, 0), 20, 0)));
+            new WeatherState.CurrentCondition(ForecastDate.AddHours(10), 21.5, 0)));
         var weather = new WeatherServiceFake();
         await using var services = CreateServices(state, weather);
         await using var renderer = new HomeRenderer(services);
@@ -77,7 +77,7 @@ public sealed class HomePageTests
 
             Assert.Contains("Пловдив", text);
             Assert.Contains("Дъжд около 17:00", text);
-            Assert.Contains("20°", text);
+            Assert.Contains("21,5°", text);
             Assert.DoesNotContain("Вали в момента", text);
             Assert.Empty(weather.RequestedCities);
             Assert.Empty(weather.RequestedDays);
