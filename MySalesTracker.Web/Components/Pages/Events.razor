@@ -38,7 +38,7 @@
 <section class="events-list" aria-label="Списък със събития">
     @foreach (var b in events)
     {
-        var isExpanded = expandedEventId == b.EventId;
+        var isExpanded = expandedEventIds.Contains(b.EventId);
         var orderedDays = b.Days.OrderBy(x => x.Date).ToList();
         var eventDaysRegionId = $"event-days-{b.EventId}";
 
@@ -90,17 +90,16 @@
   ElementReference nameInput;
   bool showCreateForm;
   bool focusName;
-  int? expandedEventId;
+  HashSet<int> expandedEventIds = new();
   bool CanSubmit => showCreateForm && !string.IsNullOrWhiteSpace(name) && start <= end;
 
   protected override async Task OnInitializedAsync()
   {
     events = await EventSvc.GetAllEventsAsync();
-    expandedEventId = events
-      .Where(e => e.StartDate <= today && today <= e.EndDate.AddDays(1))
-      .OrderByDescending(e => e.EndDate)
-      .Select(e => (int?)e.EventId)
-      .FirstOrDefault();
+    expandedEventIds = events
+      .Take(2)
+      .Select(e => e.EventId)
+      .ToHashSet();
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -160,7 +159,10 @@
 
     var savedEvent = result.Data!;
     events.Insert(0, savedEvent);
-    expandedEventId = savedEvent.EventId;
+    expandedEventIds = events
+      .Take(2)
+      .Select(e => e.EventId)
+      .ToHashSet();
 
         /* TODO: @IvayloK - replace the lines above if you need to reload all the events and keep the data updated on all the devices
         in cases where other users might have created events simultaneously. This come along with creating of a new SignalR notification
@@ -176,7 +178,10 @@
 
   void ToggleEventDays(int eventId)
   {
-    expandedEventId = expandedEventId == eventId ? null : eventId;
+    if (!expandedEventIds.Remove(eventId))
+    {
+      expandedEventIds.Add(eventId);
+    }
   }
 
   static string GetDaysLabel(int daysCount)
