@@ -96,6 +96,7 @@ public sealed class PaymentService(
                 Currency = currency,
                 Payments = paymentsByMethod,
                 BrandSalesTotals = brandSummaries.ToDictionary(b => b.Brand, b => b.NetTotal),
+                ProductQuantitiesByBrand = SalesCalculations.GetProductQuantitiesByBrand(brandSummaries),
                 TotalPayments = totalPayments,
                 TotalSales = totalSales,
                 Difference = difference

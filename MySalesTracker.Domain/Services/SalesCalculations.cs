@@ -28,6 +28,16 @@ public static class SalesCalculations
         => [.. sales.GroupBy(s => s.Product.Brand).Select(CreateBrandSummary)];
 
     /// <summary>
+    /// Totals the units sold by product name within each brand.
+    /// </summary>
+    public static Dictionary<Brand, Dictionary<string, int>> GetProductQuantitiesByBrand(IEnumerable<BrandSalesSummary> brandSummaries)
+        => brandSummaries.ToDictionary(
+            brand => brand.Brand,
+            brand => brand.Sales
+                .GroupBy(sale => sale.Product.Name)
+                .ToDictionary(product => product.Key, product => product.Sum(sale => sale.QuantityUnits)));
+
+    /// <summary>
     /// Creates a brand summary from a grouped collection of sales.
     /// </summary>
     private static BrandSalesSummary CreateBrandSummary(IGrouping<Brand, Sale> brandGroup)

@@ -5,10 +5,12 @@ namespace MySalesTracker.Domain.Entities;
 
 public sealed class Product
 {
+    public const int MaxNameLength = 50;
+
     [Key]
     public int ProductId { get; init; }
 
-    [StringLength(50)]
+    [StringLength(MaxNameLength)]
     public required string Name { get; init; }
 
     public Brand Brand { get; init; }

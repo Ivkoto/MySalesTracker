@@ -7,6 +7,7 @@ public sealed class PaymentSummary
     public required Currency Currency { get; init; }
     public required Dictionary<PaymentMethod, decimal> Payments { get; init; }
     public required Dictionary<Brand, decimal> BrandSalesTotals { get; init; }
+    public Dictionary<Brand, Dictionary<string, int>> ProductQuantitiesByBrand { get; init; } = [];
     public required decimal TotalPayments { get; init; }
     public required decimal TotalSales { get; init; }
     public required decimal Difference { get; init; }

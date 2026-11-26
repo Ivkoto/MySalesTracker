@@ -1,7 +1,15 @@
+@inject IConfiguration Config
+
 <div class="nav-menu @(IsCollapsed ? "nav-menu-collapsed" : "")">
     <div class="nav-header">
         <div class="nav-header-content">
-            <a class="navbar-brand" href="/">Sales Tracker</a>
+            <div class="nav-brand-block">
+                <a class="navbar-brand" href="/">Sales Tracker</a>
+                @if (!string.IsNullOrEmpty(AppVersion))
+                {
+                    <span class="nav-app-version">v@(AppVersion)</span>
+                }
+            </div>
             <button type="button"
                     class="nav-collapse-toggle"
                     title="@(IsCollapsed ? "Разшири менюто" : "Свий менюто")"
@@ -74,4 +82,6 @@
 
     [Parameter]
     public EventCallback OnToggleCollapsed { get; set; }
+
+    string AppVersion => Config["AppSettings:Version"] ?? string.Empty;
 }

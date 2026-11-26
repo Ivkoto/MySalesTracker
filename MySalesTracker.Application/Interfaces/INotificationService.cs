@@ -13,5 +13,14 @@ public interface INotificationService
     /// <param name="saleId">The ID of the newly created sale.</param>
     /// <param name="ct">Cancellation token.</param>
     Task NotifySaleCreatedAsync(int eventDayId, int saleId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Requests a client notification for a newly created event.
+    /// </summary>
     Task NotifyEventCreatedAsync(int eventId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Notifies clients that a new product was added to the catalog.
+    /// </summary>
+    Task NotifyProductCreatedAsync(CancellationToken ct = default);
 }

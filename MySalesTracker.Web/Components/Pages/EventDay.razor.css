@@ -18,8 +18,7 @@
 }
 
 @media (max-width: 640.98px) {
-    .sales-table {
-        width: calc(100% + 3rem);
-        margin-inline: -1.5rem;
+    .sales-table-scroll {
+        margin-inline: calc(-1 * var(--content-inline-padding));
     }
 }

@@ -19,7 +19,7 @@ else
     <div class="container-fluid px-0">
         <div class="d-flex flex-wrap gap-3 align-items-start justify-content-between mb-3">
             <div>
-                <div class="text-uppercase small text-muted">Сравнение на събития</div>
+                <div class="text-uppercase small text-muted">Статистика на събития</div>
                 <h2 class="mb-1">Обща статистика по събития</h2>
             </div>
         </div>
@@ -59,17 +59,14 @@ else
                 else
                 {
                     <div class="card shadow-sm">
-                        <div class="card-header">
-                            <div class="text-muted small">Всички стойности идват от „Обща статистика“.</div>
-                        </div>
-                        <div class="card-body table-responsive">
+                        <div class="card-body table-responsive comparison-table-scroll">
                             <table class="table table-bordered align-middle mb-0 comparison-table">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="min-width: 10rem;">Показател</th>
+                                        <th>Показател</th>
                                         @foreach (var ev in summaries)
                                         {
-                                            <th class="text-end">@ev.EventName @($"{ev.StartDate:dd.MM}-{ev.EndDate:dd.MM}")</th>
+                                            <th class="text-end text-wrap">@ev.EventName @($"{ev.StartDate:dd.MM}-{ev.EndDate:dd.MM}")</th>
                                         }
                                     </tr>
                                 </thead>
@@ -77,7 +74,7 @@ else
                                     @foreach (var row in BuildRows())
                                     {
                                         <tr class="@row.RowClass">
-                                            <td>@row.Label</td>
+                                            <td><span class="comparison-table-label">@row.Label</span></td>
                                             @foreach (var ev in summaries)
                                             {
                                                 var value = row.ValueSelector(ev);
@@ -229,24 +226,24 @@ else
 
     IEnumerable<ComparisonRow> BuildRows()
     {
-        yield return new ComparisonRow("Брой Тотем", "table-light", s => s.TotemCount, false);
+        yield return new ComparisonRow("Тотем", "table-light", s => s.TotemCount, false);
 
         foreach (var productName in GetAllProductNames(s => s.TotemProductsCount))
         {
             yield return new ComparisonRow($"↳ {productName}", "table-secondary", s => s.TotemProductsCount.GetValueOrDefault(productName, 0), false);
         }
 
-        yield return new ComparisonRow("Брой Гора", "table-light", s => s.GoraCount, false);
+        yield return new ComparisonRow("Гора", "table-light", s => s.GoraCount, false);
 
         foreach (var productName in GetAllProductNames(s => s.GoraProductsCount))
         {
             yield return new ComparisonRow($"↳ {productName}", "table-secondary", s => s.GoraProductsCount.GetValueOrDefault(productName, 0), false);
         }
 
-        yield return new ComparisonRow("Оборот Тотем", string.Empty, s => s.TotemRevenue, true);
-        yield return new ComparisonRow("Оборот Керамика", string.Empty, s => s.CeramicsRevenue, true);
-        yield return new ComparisonRow("Оборот Гора", string.Empty, s => s.GoraRevenue, true);
-        yield return new ComparisonRow("Оборот Общо", "table-light fw-semibold", s => s.TotalRevenue, true);
+        yield return new ComparisonRow("Тотем", string.Empty, s => s.TotemRevenue, true);
+        yield return new ComparisonRow("Керамика", string.Empty, s => s.CeramicsRevenue, true);
+        yield return new ComparisonRow("Гора", string.Empty, s => s.GoraRevenue, true);
+        yield return new ComparisonRow("Общо", "table-light fw-semibold", s => s.TotalRevenue, true);
     }
 
     IEnumerable<string> GetAllProductNames(Func<EventSummaryDto, Dictionary<string, int>> selector)

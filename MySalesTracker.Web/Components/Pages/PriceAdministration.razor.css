@@ -53,6 +53,10 @@
     overflow: hidden;
 }
 
+.add-product-form {
+    max-width: 28rem;
+}
+
 .product-price-header {
     display: flex;
     align-items: flex-start;
@@ -66,6 +70,7 @@
     font-size: 1.05rem;
     font-weight: 700;
     line-height: 1.2;
+    overflow-wrap: anywhere;
 }
 
 .current-price-label,

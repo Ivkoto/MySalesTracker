@@ -1,11 +1,48 @@
 using Microsoft.Extensions.Logging;
+using MySalesTracker.Application.DTOs;
 using MySalesTracker.Application.Interfaces;
 using MySalesTracker.Domain.Entities;
+using MySalesTracker.Domain.Enums;
 
 namespace MySalesTracker.Application.Services;
 
 public sealed class ProductService(IProductRepository productRepository, ILogger<ProductService> logger)
 {
+    public async Task<ServiceResult<Product>> CreateProductAsync(Brand brand, string? name, CancellationToken ct = default)
+    {
+        if (!Enum.IsDefined(brand))
+        {
+            return ServiceResult<Product>.FailureResult("Изберете валидна марка.");
+        }
+
+        var productName = name?.Trim();
+        if (string.IsNullOrEmpty(productName))
+        {
+            return ServiceResult<Product>.FailureResult("Въведете име на продукта.");
+        }
+
+        if (productName.Length > Product.MaxNameLength)
+        {
+            return ServiceResult<Product>.FailureResult($"Името на продукта може да съдържа до {Product.MaxNameLength} знака.");
+        }
+
+        var product = new Product { Brand = brand, Name = productName };
+        try
+        {
+            if (!await productRepository.TryAddAsync(product, ct))
+            {
+                return ServiceResult<Product>.FailureResult("В тази марка вече има продукт с това име.");
+            }
+
+            return ServiceResult<Product>.SuccessResult(product, "Продуктът е добавен.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Failed to create product for Brand {Brand}", brand);
+            return ServiceResult<Product>.FailureResult("Продуктът не можа да бъде добавен.");
+        }
+    }
+
     /// <summary>
     /// Gets all active products ordered by brands.
     /// </summary>

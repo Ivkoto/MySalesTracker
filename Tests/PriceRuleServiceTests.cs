@@ -9,6 +9,31 @@ namespace MySalesTracker.Tests;
 
 public sealed class PriceRuleServiceTests
 {
+    [Theory]
+    [InlineData(Brand.Totem, false)]
+    [InlineData(Brand.Ceramics, true)]
+    [InlineData(Brand.Candles, false)]
+    public async Task NewProduct_IsAvailableForPricingAndSalesUnderSelectedBrand(Brand brand, bool usesFreePrice)
+    {
+        var productRepository = new ProductRepositoryFake();
+        var products = new ProductService(productRepository, NullLogger<ProductService>.Instance);
+        var prices = CreateService(new PriceRuleRepositoryFake(), productRepository);
+        var ct = TestContext.Current.CancellationToken;
+
+        var result = await products.CreateProductAsync(brand, "  Нов продукт  ", ct);
+
+        Assert.True(result.Success);
+        var product = Assert.Single(await products.GetActiveProductsAsync(ct));
+        Assert.Equal("Нов продукт", product.Name);
+        Assert.Equal(brand, product.Brand);
+
+        var pricing = Assert.Single(await prices.GetProductPricingAsync(ct));
+        Assert.Equal(product.Name, pricing.ProductName);
+        Assert.Equal(brand, pricing.Brand);
+        Assert.Equal(usesFreePrice, pricing.IsFreePrice);
+        Assert.Empty(pricing.CurrentRules);
+    }
+
     [Fact]
     public async Task UpdateProductPriceRulesAsync_ValidRules_CreatesOrderedReplacementSet()
     {
@@ -163,18 +188,6 @@ public sealed class PriceRuleServiceTests
             SortOrder = sortOrder,
             IsDefault = isDefault
         };
-
-    private sealed class ProductRepositoryFake(Product product) : IProductRepository
-    {
-        public Task<List<Product>> GetActiveProductsAsync(CancellationToken ct)
-            => Task.FromResult(new List<Product> { product });
-
-        public Task<List<Product>> GetActiveProductsWithPriceRulesAsync(CancellationToken ct)
-            => Task.FromResult(new List<Product> { product });
-
-        public Task<Product?> GetActiveProductWithPriceRulesAsync(int productId, CancellationToken ct)
-            => Task.FromResult<Product?>(product.ProductId == productId ? product : null);
-    }
 
     private sealed class PriceRuleRepositoryFake : IPriceRuleRepository
     {

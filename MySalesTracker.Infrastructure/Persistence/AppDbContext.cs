@@ -55,6 +55,12 @@ public class AppDbContext : DbContext
             .HasConversion(brandToString)
             .HasMaxLength(50);
 
+        b.Entity<Product>()
+            .HasIndex(p => new { p.Brand, p.Name })
+            .IsUnique()
+            .HasFilter("[IsActive] = 1")
+            .HasDatabaseName("UX_Products_Active_Brand_Name");
+
         b.Entity<Sale>()
             .Property(s => s.Currency)
             .HasDefaultValue(Currency.EUR);

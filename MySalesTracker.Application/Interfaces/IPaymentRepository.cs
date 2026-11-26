@@ -3,6 +3,9 @@ using MySalesTracker.Domain.Enums;
 
 namespace MySalesTracker.Application.Interfaces;
 
+/// <summary>
+/// Repository for managing payments recorded for event days.
+/// </summary>
 public interface IPaymentRepository
 {
     /// <summary>
