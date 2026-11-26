@@ -1,14 +1,3 @@
-.comparison-table th,
-.comparison-table td {
-    white-space: nowrap;
-    min-width: 6.5rem;
-}
-
-.comparison-table th:first-child,
-.comparison-table td:first-child {
-    min-width: 10.5rem;
-}
-
 .day-selector-card {
     width: 100%;
 }

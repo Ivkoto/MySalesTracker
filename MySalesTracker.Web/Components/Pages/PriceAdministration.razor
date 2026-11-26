@@ -1,6 +1,8 @@
 @page "/admin/prices"
 @attribute [Authorize]
 @inject PriceRuleService PriceRuleSvc
+@inject ProductService ProductSvc
+@inject INotificationService Notifications
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Цени</PageTitle>
@@ -16,11 +18,46 @@
                 role="tab"
                 aria-selected="@(selectedBrand == brand)"
                 class="brand-tab @(selectedBrand == brand ? "brand-tab-active" : null)"
+                disabled="@isCreatingProduct"
                 @onclick="() => SelectBrand(brand)">
             @brand.GetDisplayName()
         </button>
     }
 </div>
+
+@if (showProductForm)
+{
+    <form class="product-price-card add-product-form p-3 mb-3" @onsubmit="AddProductAsync" @onsubmit:preventDefault>
+        <label for="new-product-name" class="form-label">Име на продукт (@selectedBrand.GetDisplayName())</label>
+        <input id="new-product-name" type="text" class="form-control"
+               maxlength="@Product.MaxNameLength" required
+               disabled="@isCreatingProduct"
+               @bind="newProductName" @bind:event="oninput" />
+
+        @if (!string.IsNullOrWhiteSpace(productError))
+        {
+            <div class="editor-error" role="alert">@productError</div>
+        }
+
+        <div class="editor-actions">
+            <button type="submit" class="btn btn-primary"
+                    disabled="@(isCreatingProduct || string.IsNullOrWhiteSpace(newProductName))">
+                @(isCreatingProduct ? "Записване..." : "Запази")
+            </button>
+            <button type="button" class="btn btn-outline-secondary"
+                    disabled="@isCreatingProduct" @onclick="CancelAddingProduct">
+                Откажи
+            </button>
+        </div>
+    </form>
+}
+else
+{
+    <button type="button" class="btn btn-outline-primary mb-3"
+            disabled="@(isLoading || editingProductId.HasValue)" @onclick="StartAddingProduct">
+        Добави продукт
+    </button>
+}
 
 @if (!string.IsNullOrWhiteSpace(pageMessage))
 {
@@ -53,7 +90,7 @@ else
                         }
                         else if (product.CurrentRules.Count > 0)
                         {
-                            <span class="current-price-label">Текущи цени</span>
+                            <span class="current-price-label">Активни цени</span>
                         }
                         else
                         {
@@ -65,6 +102,7 @@ else
                     {
                         <button type="button"
                                 class="btn btn-outline-primary btn-sm edit-price-button"
+                                disabled="@showProductForm"
                                 @onclick="() => StartEditing(product)">
                             <span class="bi bi-pencil" aria-hidden="true"></span>
                             Промени
@@ -84,7 +122,7 @@ else
                     <div class="price-editor">
                         <div class="editor-column-labels" aria-hidden="true">
                             <span>Осн.</span>
-                            <span>Цена (EUR)</span>
+                            <span>Цена (@Currency.EUR.GetDisplayName())</span>
                             <span>бр.</span>
                             <span></span>
                         </div>
@@ -183,6 +221,10 @@ else
     private int? editingProductId;
     private bool isLoading = true;
     private bool isSaving;
+    private bool showProductForm;
+    private bool isCreatingProduct;
+    private string? newProductName;
+    private string? productError;
     private string? pageMessage;
     private string? pageError;
     private string? editorError;
@@ -216,10 +258,66 @@ else
 
     private void SelectBrand(Brand brand)
     {
+        if (isCreatingProduct)
+        {
+            return;
+        }
+
         selectedBrand = brand;
         CancelEditing();
+        productError = null;
         pageMessage = null;
         pageError = null;
+    }
+
+    private void StartAddingProduct()
+    {
+        showProductForm = true;
+        pageMessage = null;
+        pageError = null;
+    }
+
+    private void CancelAddingProduct()
+    {
+        showProductForm = false;
+        newProductName = null;
+        productError = null;
+    }
+
+    private async Task AddProductAsync()
+    {
+        if (isCreatingProduct || !showProductForm)
+        {
+            return;
+        }
+
+        isCreatingProduct = true;
+        productError = null;
+        ServiceResult<Product> result;
+        try
+        {
+            result = await ProductSvc.CreateProductAsync(selectedBrand, newProductName);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            productError = "Продуктът не можа да бъде добавен.";
+            return;
+        }
+        finally
+        {
+            isCreatingProduct = false;
+        }
+
+        if (!result.Success)
+        {
+            productError = result.ErrorMessage;
+            return;
+        }
+
+        CancelAddingProduct();
+        pageMessage = result.SuccessMessage;
+        await Notifications.NotifyProductCreatedAsync();
+        await LoadProductsAsync();
     }
 
     private void StartEditing(ProductPricing product)
@@ -346,7 +444,7 @@ else
     }
 
     private static string FormatPrice(decimal price)
-        => $"{price.ToString("0.00", Bg)} EUR";
+        => $"{price.ToString("0.00", Bg)} {Currency.EUR.GetDisplayName()}";
 
     private sealed class EditablePriceRule
     {

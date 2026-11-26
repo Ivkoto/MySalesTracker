@@ -17,7 +17,7 @@ namespace MySalesTracker.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -200,6 +200,11 @@ namespace MySalesTracker.Infrastructure.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("ProductId");
+
+                    b.HasIndex("Brand", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Products_Active_Brand_Name")
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("Products");
                 });

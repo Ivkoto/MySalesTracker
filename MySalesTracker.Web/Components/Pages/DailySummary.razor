@@ -40,7 +40,7 @@ else
         <table class="table table-bordered align-middle mb-4" style="max-width: 600px;">
             <tbody>
                 <tr>
-                    <td class="px-3 fw-bold" style="width: 50%;">Взети Оборотни</td>
+                    <td class="px-3 fw-bold" style="width: 50%;">Оборотни</td>
                     <td class="px-3">
                         <input @ref="pettyCashInput" type="text" inputmode="decimal" enterkeyhint="done"
                                autocomplete="off" class="form-control text-end"
@@ -58,13 +58,13 @@ else
         <table class="table table-bordered align-middle" style="max-width: 600px;">
             <thead class="table-warning">
                 <tr>
-                    <th class="px-3">Метод на плащане</th>
+                    <th class="px-3">Налични</th>
                     <th class="px-3 text-end">@GetAmountHeader()</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td class="px-3">налични кеш</td>
+                    <td class="px-3">Кеш</td>
                     <td class="px-3">
                         <input @ref="cashInput" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
                                class="form-control text-end" 
@@ -73,7 +73,7 @@ else
                     </td>
                 </tr>
                 <tr>
-                    <td class="px-3">налични карта</td>
+                    <td class="px-3">Карта</td>
                     <td class="px-3">
                         <input @ref="cardInput" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
                                class="form-control text-end"
@@ -82,7 +82,7 @@ else
                     </td>
                 </tr>
                 <tr>
-                    <td class="px-3">Revolut Лидия</td>
+                    <td class="px-3">Лидия</td>
                     <td class="px-3">
                         <input @ref="revolutLidiaInput" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
                                class="form-control text-end"
@@ -91,7 +91,7 @@ else
                     </td>
                 </tr>
                 <tr>
-                    <td class="px-3">Revolut Ивайло</td>
+                    <td class="px-3">Ивайло</td>
                     <td class="px-3">
                         <input @ref="revolutIvayloInput" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off"
                                class="form-control text-end"
@@ -153,7 +153,36 @@ else
                     <td class="px-3 fw-bold text-end">@FormatCurrency(difference)</td>
                 </tr>
             </tbody>
-        </table>        
+        </table>
+
+        @if (summary is not null)
+        {
+            <table class="table table-bordered align-middle mt-4" style="max-width: 600px;">
+                <thead class="table-primary">
+                    <tr>
+                        <th class="px-3">Продадени бройки</th>
+                        <th class="px-3 text-end">Брой</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (brand, label) in QuantityBrands)
+                    {
+                        var quantities = summary.ProductQuantitiesByBrand.GetValueOrDefault(brand) ?? [];
+                        <tr>
+                            <td class="px-3">@label</td>
+                            <td class="px-3 text-end fw-bold">@quantities.Values.Sum()</td>
+                        </tr>
+                        @foreach (var (product, quantity) in quantities)
+                        {
+                            <tr class="table-secondary">
+                                <td class="px-3 ps-5" style="font-size: 0.9em;">↳ @product</td>
+                                <td class="px-3 text-end" style="font-size: 0.9em;">@quantity</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        }
     </div>
 }
 
@@ -186,6 +215,8 @@ else
     ElementReference pettyCashInput;
 
     static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
+    static readonly (Brand Brand, string Label)[] QuantityBrands =
+        [(Brand.Totem, "Брой Тотем"), (Brand.Candles, "Брой Гора")];
 
     Currency DisplayCurrency => summary?.Currency ?? Currency.EUR;
 
@@ -246,10 +277,10 @@ else
         validationMessage = null;
 
         // Validate all fields
-        if (!ValidateDecimalInput(cashText, "налични кеш") ||
-            !ValidateDecimalInput(cardText, "налични карта") ||
-            !ValidateDecimalInput(revolutLidiaText, "Revolut Лидия") ||
-            !ValidateDecimalInput(revolutIvayloText, "Revolut Ивайло"))
+        if (!ValidateDecimalInput(cashText, "Кеш") ||
+            !ValidateDecimalInput(cardText, "Карта") ||
+            !ValidateDecimalInput(revolutLidiaText, "Лидия") ||
+            !ValidateDecimalInput(revolutIvayloText, "Ивайло"))
         {
             return;
         }
@@ -286,10 +317,10 @@ else
         // Validate before saving
         validationMessage = null;
 
-        if (!ValidateDecimalInput(cashText, "налични кеш") ||
-            !ValidateDecimalInput(cardText, "налични карта") ||
-            !ValidateDecimalInput(revolutLidiaText, "Revolut Лидия") ||
-            !ValidateDecimalInput(revolutIvayloText, "Revolut Ивайло"))
+        if (!ValidateDecimalInput(cashText, "Кеш") ||
+            !ValidateDecimalInput(cardText, "Карта") ||
+            !ValidateDecimalInput(revolutLidiaText, "Лидия") ||
+            !ValidateDecimalInput(revolutIvayloText, "Ивайло"))
         {
             return;
         }
@@ -360,7 +391,7 @@ else
 
         if (!DecimalParsingHelper.TryParseDecimal(pettyCashText, out var amount))
         {
-            validationMessage = "Невалидна стойност за Взети Оборотни";
+            validationMessage = "Невалидна стойност за Оборотни";
             return;
         }
         

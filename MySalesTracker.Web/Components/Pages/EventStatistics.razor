@@ -4,6 +4,7 @@
 
 @using Microsoft.AspNetCore.WebUtilities
 @using MySalesTracker.Application.DTOs
+@using EventSummaryDto = MySalesTracker.Application.DTOs.EventSummary
 
 @inject EventService EventSvc
 @inject NavigationManager Nav
@@ -22,7 +23,7 @@ else if (eventSummary is not null)
     <div class="container-fluid px-0">
         <div class="d-flex flex-wrap gap-3 align-items-start mb-3 header-bar">
             <div class="header-title">
-                <div class="text-uppercase small text-muted">Сравнение по дни</div>
+                <div class="text-uppercase small text-muted">Статистика по дни</div>
                 <h2 class="mb-1">@eventSummary.EventName</h2>
                 <div class="text-muted">
                     @eventSummary.StartDate.ToString("dd.MM", Bg) → @eventSummary.EndDate.ToString("dd.MM", Bg)
@@ -86,45 +87,18 @@ else if (eventSummary is not null)
                             <a href="@($"/event/{currentEventId}/summary")" class="btn btn-outline-success btn-sm">Подробно</a>
                         </div>
                         <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <div class="fw-semibold mb-2">Оборот по бранд</div>
-                                    <table class="table table-sm mb-0">
-                                        <tbody>
-                                            <tr><td>Общо ТОТЕМ</td><td class="text-end">@FormatCurrency(eventSummary.TotemRevenue)</td></tr>
-                                            <tr><td>Общо Керамика</td><td class="text-end">@FormatCurrency(eventSummary.CeramicsRevenue)</td></tr>
-                                            <tr><td>Общо Гора</td><td class="text-end">@FormatCurrency(eventSummary.GoraRevenue)</td></tr>
-                                            <tr class="table-light fw-semibold">
-                                                <td>Оборот Общо</td>
-                                                <td class="text-end">@FormatCurrency(eventSummary.TotalRevenue)</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="fw-semibold mb-2">Плащания</div>
-                                    <table class="table table-sm mb-0">
-                                        <tbody>
-                                            <tr><td>Налични кеш</td><td class="text-end">@FormatCurrency(eventSummary.CashTotal)</td></tr>
-                                            <tr><td>Налични карта</td><td class="text-end">@FormatCurrency(eventSummary.CardTotal)</td></tr>
-                                            <tr><td>Revolut Лидия</td><td class="text-end">@FormatCurrency(eventSummary.RevolutLidiaTotal)</td></tr>
-                                            <tr><td>Revolut Ивайло</td><td class="text-end">@FormatCurrency(eventSummary.RevolutIvayloTotal)</td></tr>
-                                            <tr class="table-light fw-semibold">
-                                                <td>Сума</td>
-                                                <td class="text-end">@FormatCurrency(EventTotalPayments)</td>
-                                            </tr>
-                                            <tr class="@(EventDifference >= 0 ? "table-success" : "table-danger") fw-semibold">
-                                                <td>Разлика</td>
-                                                <td class="text-end">
-                                                    <span class="badge @(EventDifference >= 0 ? "bg-success" : "bg-danger")">
-                                                        @FormatCurrency(EventDifference)
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                            <div class="fw-semibold mb-2">Продажби по Бранд</div>
+                            <table class="table table-sm mb-0">
+                                <tbody>
+                                    <tr><td>Общо ТОТЕМ</td><td class="text-end">@FormatCurrency(eventSummary.TotemRevenue)</td></tr>
+                                    <tr><td>Общо Керамика</td><td class="text-end">@FormatCurrency(eventSummary.CeramicsRevenue)</td></tr>
+                                    <tr><td>Общо Гора</td><td class="text-end">@FormatCurrency(eventSummary.GoraRevenue)</td></tr>
+                                    <tr class="table-light fw-semibold">
+                                        <td>ТОТАЛ</td>
+                                        <td class="text-end">@FormatCurrency(eventSummary.TotalRevenue)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
@@ -145,68 +119,43 @@ else if (eventSummary is not null)
                                 <a href="@($"/day/{day.EventDayId}/summary")" class="btn btn-outline-primary btn-sm">Към детайла</a>
                             </div>
                             <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <div class="fw-semibold mb-2">Плащания</div>
-                                        <table class="table table-sm mb-0">
-                                            <tbody>
-                                                <tr><td>Налични кеш</td><td class="text-end">@FormatCurrency(GetPayment(summary, PaymentMethod.Cash))</td></tr>
-                                                <tr><td>Налични карта</td><td class="text-end">@FormatCurrency(GetPayment(summary, PaymentMethod.Card))</td></tr>
-                                                <tr><td>Revolut Лидия</td><td class="text-end">@FormatCurrency(GetPayment(summary, PaymentMethod.RevolutLidia))</td></tr>
-                                                <tr><td>Revolut Ивайло</td><td class="text-end">@FormatCurrency(GetPayment(summary, PaymentMethod.RevolutIvaylo))</td></tr>
-                                                <tr class="table-light fw-semibold">
-                                                    <td>Сума</td>
-                                                    <td class="text-end">@FormatCurrency(summary.TotalPayments)</td>
-                                                </tr>
-                                                <tr class="@(summary.Difference >= 0 ? "table-success" : "table-danger") fw-semibold">
-                                                    <td>Разлика</td>
-                                                    <td class="text-end">
-                                                        <span class="badge @(summary.Difference >= 0 ? "bg-success" : "bg-danger")">
-                                                            @FormatCurrency(summary.Difference)
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="fw-semibold mb-2">Продажби по бранд</div>
-                                        <table class="table table-sm mb-0">
-                                            <tbody>
-                                                <tr><td>Общо ТОТЕМ</td><td class="text-end">@FormatCurrency(GetBrand(summary, Brand.Totem))</td></tr>
-                                                <tr><td>Общо Керамика</td><td class="text-end">@FormatCurrency(GetBrand(summary, Brand.Ceramics))</td></tr>
-                                                <tr><td>Общо Гора</td><td class="text-end">@FormatCurrency(GetBrand(summary, Brand.Candles))</td></tr>
-                                                <tr class="table-light fw-semibold">
-                                                    <td>ТОТАЛ</td>
-                                                    <td class="text-end">@FormatCurrency(summary.TotalSales)</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                                <div class="fw-semibold mb-2">Продажби по Бранд</div>
+                                <table class="table table-sm mb-0">
+                                    <tbody>
+                                        <tr><td>Общо ТОТЕМ</td><td class="text-end">@FormatCurrency(GetBrand(summary, Brand.Totem))</td></tr>
+                                        <tr><td>Общо Керамика</td><td class="text-end">@FormatCurrency(GetBrand(summary, Brand.Ceramics))</td></tr>
+                                        <tr><td>Общо Гора</td><td class="text-end">@FormatCurrency(GetBrand(summary, Brand.Candles))</td></tr>
+                                        <tr class="table-light fw-semibold">
+                                            <td>ТОТАЛ</td>
+                                            <td class="text-end">@FormatCurrency(summary.TotalSales)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     }
                 }
                 else
                 {
+                    var selectedDays = SelectedDaySummaries.OrderBy(day => day.Date).ToList();
+
                     <div class="card shadow-sm">
-                        <div class="card-header">
-                            <div class="fw-semibold">Таблично Сравнение</div>
-                        </div>
-                        <div class="card-body table-responsive">
-                            @if (!SelectedDaySummaries.Any())
-                            {
+                        @if (selectedDays.Count == 0)
+                        {
+                            <div class="card-body">
                                 <div class="alert alert-info mb-0">Няма избрани дни. Избери ден отляво.</div>
-                            }
-                            else
-                            {
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="card-body table-responsive comparison-table-scroll">
                                 <table class="table table-bordered align-middle mb-0 comparison-table">
                                     <thead class="table-light">
                                         <tr>
-                                            <th style="min-width: 170px;"></th>
+                                            <th></th>
                                             <th class="text-end">Общо</th>
-                                            @foreach (var day in SelectedDaySummaries.OrderBy(d => d.Date))
+                                            <th class="text-end">Сума</th>
+                                            @foreach (var day in selectedDays)
                                             {
                                                 <th class="text-end">@GetDayLabel(day.Date)</th>
                                             }
@@ -215,10 +164,14 @@ else if (eventSummary is not null)
                                     <tbody>
                                         @foreach (var row in BuildComparisonRows())
                                         {
+                                            var dayValues = selectedDays.Select(row.DayExtractor).ToArray();
+                                            var daySum = dayValues.Sum();
+
                                             <tr class="@row.RowClass">
-                                                <td>@row.Label</td>
-                                                <td class="text-end" style="font-weight: bold;">@FormatCurrency(row.EventValue)</td>
-                                                @foreach (var value in SelectedDaySummaries.OrderBy(d => d.Date).Select(row.DayExtractor))
+                                                <td><span class="comparison-table-label">@row.Label</span></td>
+                                                <td class="text-end" style="font-weight: bold;">@FormatComparisonValue(row, row.EventValue)</td>
+                                                <td class="text-end @(row.IsDifference ? (daySum < 0 ? "table-danger" : "table-success") : string.Empty)">@FormatComparisonValue(row, daySum)</td>
+                                                @foreach (var value in dayValues)
                                                 {
                                                     if (row.IsDifference)
                                                     {
@@ -230,15 +183,15 @@ else if (eventSummary is not null)
                                                     }
                                                     else
                                                     {
-                                                        <td class="text-end">@FormatCurrency(value)</td>
+                                                        <td class="text-end">@FormatComparisonValue(row, value)</td>
                                                     }
                                                 }
                                             </tr>
                                         }
                                     </tbody>
                                 </table>
-                            }
-                        </div>
+                            </div>
+                        }
                     </div>
                 }
             </div>
@@ -249,12 +202,12 @@ else if (eventSummary is not null)
 @code {
     [Parameter] public int? EventId { get; set; }
 
-    MySalesTracker.Application.DTOs.EventSummary? eventSummary;
+    EventSummaryDto? eventSummary;
     List<EventDayInfo> eventDays = new();
     List<Domain.Entities.Event> events = new();
     readonly Dictionary<int, DayStatistics> dayCache = new();
     HashSet<int> selectedDayIds = new();
-    StatisticsViewMode viewMode = StatisticsViewMode.Cards;
+    StatisticsViewMode viewMode = StatisticsViewMode.Comparison;
     bool isLoading = true;
     string? errorMessage;
     bool skipQueryLoad;
@@ -324,7 +277,7 @@ else if (eventSummary is not null)
         }
         else
         {
-            viewMode = StatisticsViewMode.Cards;
+            viewMode = StatisticsViewMode.Comparison;
         }
     }
 
@@ -526,6 +479,9 @@ else if (eventSummary is not null)
 
     string FormatCurrency(decimal value) => $"{value.ToString("0.00", Bg)} {DisplayCurrency.GetDisplayName()}";
 
+    string FormatComparisonValue(ComparisonRow row, decimal value)
+        => row.IsCurrency ? FormatCurrency(value) : value.ToString("0", Bg);
+
     decimal GetPayment(PaymentSummary summary, PaymentMethod method)
         => summary.Payments.TryGetValue(method, out var value) ? value : 0m;
 
@@ -539,15 +495,20 @@ else if (eventSummary is not null)
             yield break;
         }
 
-        yield return new ComparisonRow("Оборот Общо", "table-light", eventSummary.TotalRevenue, day => day.PaymentSummary.TotalSales);
-        yield return new ComparisonRow("Общо ТОТЕМ", "table-light", eventSummary.TotemRevenue, day => GetBrand(day.PaymentSummary, Brand.Totem));
-        yield return new ComparisonRow("Общо Керамика", "table-light", eventSummary.CeramicsRevenue, day => GetBrand(day.PaymentSummary, Brand.Ceramics));
-        yield return new ComparisonRow("Общо Гора", "table-light", eventSummary.GoraRevenue, day => GetBrand(day.PaymentSummary, Brand.Candles));
-        yield return new ComparisonRow("Налични кеш", string.Empty, eventSummary.CashTotal, day => GetPayment(day.PaymentSummary, PaymentMethod.Cash));
-        yield return new ComparisonRow("Налични карта", string.Empty, eventSummary.CardTotal, day => GetPayment(day.PaymentSummary, PaymentMethod.Card));
-        yield return new ComparisonRow("Revolut Лидия", string.Empty, eventSummary.RevolutLidiaTotal, day => GetPayment(day.PaymentSummary, PaymentMethod.RevolutLidia));
-        yield return new ComparisonRow("Revolut Ивайло", string.Empty, eventSummary.RevolutIvayloTotal, day => GetPayment(day.PaymentSummary, PaymentMethod.RevolutIvaylo));
-        yield return new ComparisonRow("Сума плащания", "table-light", EventTotalPayments, day => day.PaymentSummary.TotalPayments);
+        yield return new ComparisonRow("Оборот", "table-light", eventSummary.TotalRevenue, day => day.PaymentSummary.TotalSales);
+        yield return new ComparisonRow("ТОТЕМ", "table-light", eventSummary.TotemRevenue, day => GetBrand(day.PaymentSummary, Brand.Totem));
+        yield return new ComparisonRow("Керамика", "table-light", eventSummary.CeramicsRevenue, day => GetBrand(day.PaymentSummary, Brand.Ceramics));
+        yield return new ComparisonRow("Гора", "table-light", eventSummary.GoraRevenue, day => GetBrand(day.PaymentSummary, Brand.Candles));
+
+        foreach (var row in BuildQuantityRows(eventSummary))
+        {
+            yield return row;
+        }
+
+        yield return new ComparisonRow("Кеш", string.Empty, eventSummary.CashTotal, day => GetPayment(day.PaymentSummary, PaymentMethod.Cash));
+        yield return new ComparisonRow("Карта", string.Empty, eventSummary.CardTotal, day => GetPayment(day.PaymentSummary, PaymentMethod.Card));
+        yield return new ComparisonRow("Лидия", string.Empty, eventSummary.RevolutLidiaTotal, day => GetPayment(day.PaymentSummary, PaymentMethod.RevolutLidia));
+        yield return new ComparisonRow("Ивайло", string.Empty, eventSummary.RevolutIvayloTotal, day => GetPayment(day.PaymentSummary, PaymentMethod.RevolutIvaylo));
 
         var eventDiff = EventDifference;
 
@@ -555,7 +516,35 @@ else if (eventSummary is not null)
             day => day.PaymentSummary.Difference, true);
     }
 
-    private sealed record ComparisonRow(string Label, string RowClass, decimal EventValue, Func<DayStatistics, decimal> DayExtractor, bool IsDifference = false);
+    IEnumerable<ComparisonRow> BuildQuantityRows(EventSummaryDto summary)
+        => BuildQuantityRows("Брой Тотем", Brand.Totem, summary.TotemCount, summary.TotemProductsCount)
+            .Concat(BuildQuantityRows("Брой Гора", Brand.Candles, summary.GoraCount, summary.GoraProductsCount));
+
+    IEnumerable<ComparisonRow> BuildQuantityRows(
+        string label,
+        Brand brand,
+        int eventTotal,
+        IReadOnlyDictionary<string, int> eventQuantities)
+    {
+        yield return new ComparisonRow(label, string.Empty, eventTotal,
+            day => day.PaymentSummary.ProductQuantitiesByBrand.GetValueOrDefault(brand)?.Values.Sum() ?? 0,
+            IsCurrency: false);
+
+        foreach (var (product, quantity) in eventQuantities)
+        {
+            yield return new ComparisonRow($"↳ {product}", "table-secondary", quantity,
+                day => day.PaymentSummary.ProductQuantitiesByBrand.GetValueOrDefault(brand)?.GetValueOrDefault(product) ?? 0,
+                IsCurrency: false);
+        }
+    }
+
+    private sealed record ComparisonRow(
+        string Label,
+        string RowClass,
+        decimal EventValue,
+        Func<DayStatistics, decimal> DayExtractor,
+        bool IsDifference = false,
+        bool IsCurrency = true);
 
     private enum StatisticsViewMode
     {

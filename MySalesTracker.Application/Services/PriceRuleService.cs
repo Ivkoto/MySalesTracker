@@ -134,7 +134,7 @@ public sealed class PriceRuleService(
 
         if (request.Rules.Any(r => r.Price <= 0 || r.Price > 9999.99m))
         {
-            return "Цените трябва да бъдат между 0,01 и 9999,99 EUR.";
+            return "Цените трябва да бъдат между 0,01 и 9999,99 €.";
         }
 
         if (request.Rules.Any(r => decimal.Round(r.Price, 2) != r.Price))

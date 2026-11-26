@@ -69,3 +69,38 @@ h1:focus {
 .compact-table td {
     padding: 0.3rem 0.5rem !important; /* Smaller padding */
 }
+
+.comparison-table th,
+.comparison-table td {
+    white-space: nowrap;
+    min-width: 6.5rem;
+}
+
+.comparison-table th:first-child,
+.comparison-table td:first-child {
+    min-width: 0;
+    /* Let the longest label set the width of this column. */
+    width: 0;
+}
+
+@media (max-width: 640.98px) {
+    .comparison-table-scroll {
+        padding-inline: 0;
+    }
+
+    .comparison-table th:first-child,
+    .comparison-table td:first-child {
+        position: sticky;
+        inset-inline-start: 0;
+        z-index: 1;
+        box-shadow: inset -1px 0 var(--bs-table-border-color);
+    }
+
+    .comparison-table-label {
+        display: block;
+        inline-size: max-content;
+        max-inline-size: 50vw;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+}

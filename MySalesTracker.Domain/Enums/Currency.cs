@@ -4,6 +4,6 @@ using System.ComponentModel.DataAnnotations;
 namespace MySalesTracker.Domain.Enums;
 public enum Currency
 {
-    [Display(Name = "EUR")]
+    [Display(Name = "€")]
     EUR = 0
 }

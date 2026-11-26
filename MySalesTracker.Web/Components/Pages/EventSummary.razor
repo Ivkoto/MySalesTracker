@@ -16,21 +16,48 @@ else if (!string.IsNullOrEmpty(errorMessage))
 }
 else if (summary is not null)
 {
-    <h2>Обща статистика - @summary.EventName</h2>
+    <h2>Оборот - @summary.EventName</h2>
 
     <p><a href="/events">⬅️ Назад към събития</a> | (@summary.StartDate.ToString("dd.MM", Bg) → @summary.EndDate.ToString("dd.MM", Bg))</p>
 
     <div class="mt-4">
         <table class="table table-bordered align-middle" style="max-width: 600px;">
-            <thead class="table-primary">
+            <thead class="table-info">
                 <tr>
-                    <th class="px-3">Целия базар</th>
-                    <th class="px-3 text-end">Стойност</th>
+                    <th class="px-3">Продажби по Бранд</th>
+                    <th class="px-3 text-end">@GetAmountHeader()</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td class="px-3">Брой Тотем</td>
+                    <td class="px-3">ТОТЕМ</td>
+                    <td class="px-3 text-end">@FormatCurrency(summary.TotemRevenue)</td>
+                </tr>
+                <tr>
+                    <td class="px-3">Керамика</td>
+                    <td class="px-3 text-end">@FormatCurrency(summary.CeramicsRevenue)</td>
+                </tr>
+                <tr>
+                    <td class="px-3">Гора</td>
+                    <td class="px-3 text-end">@FormatCurrency(summary.GoraRevenue)</td>
+                </tr>
+                <tr class="table-light">
+                    <td class="px-3 fw-bold">Общо</td>
+                    <td class="px-3 fw-bold text-end">@FormatCurrency(summary.TotalRevenue)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="table table-bordered align-middle mt-4" style="max-width: 600px;">
+            <thead class="table-primary">
+                <tr>
+                    <th class="px-3">Продадени бройки</th>
+                    <th class="px-3 text-end">Брой</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="px-3">ТОТЕМ</td>
                     <td class="px-3 text-end fw-bold">@summary.TotemCount</td>
                 </tr>
                 @foreach(var product in summary.TotemProductsCount)
@@ -41,7 +68,7 @@ else if (summary is not null)
                     </tr>
                 }
                 <tr>
-                    <td class="px-3">Брой Гора</td>
+                    <td class="px-3">Гора</td>
                     <td class="px-3 text-end fw-bold">@summary.GoraCount</td>
                 </tr>
                 @foreach (var product in summary.GoraProductsCount)
@@ -51,47 +78,31 @@ else if (summary is not null)
                         <td class="px-3 text-end" style="font-size: 0.9em;">@product.Value</td>
                     </tr>
                 }
-                <tr>
-                    <td class="px-3">Оборот Тотем</td>
-                    <td class="px-3 text-end">@FormatCurrency(summary.TotemRevenue)</td>
-                </tr>
-                <tr>
-                    <td class="px-3">Оборот Керамика</td>
-                    <td class="px-3 text-end">@FormatCurrency(summary.CeramicsRevenue)</td>
-                </tr>
-                <tr>
-                    <td class="px-3">Оборот Гора</td>
-                    <td class="px-3 text-end">@FormatCurrency(summary.GoraRevenue)</td>
-                </tr>
-                <tr class="table-light">
-                    <td class="px-3 fw-bold">Оборот Общо</td>
-                    <td class="px-3 fw-bold text-end">@FormatCurrency(summary.TotalRevenue)</td>
-                </tr>
             </tbody>
         </table>
 
         <table class="table table-bordered align-middle mt-4" style="max-width: 600px;">
             <thead class="table-info">
                 <tr>
-                    <th class="px-3">Налични - записани</th>
+                    <th class="px-3">Налични</th>
                     <th class="px-3 text-end">@GetAmountHeader()</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td class="px-3">Налични кеш оборот</td>
+                    <td class="px-3">Кеш</td>
                     <td class="px-3 text-end">@FormatCurrency(summary.CashTotal)</td>
                 </tr>
                 <tr>
-                    <td class="px-3">Налични карта оборот</td>
+                    <td class="px-3">Карта</td>
                     <td class="px-3 text-end">@FormatCurrency(summary.CardTotal)</td>
                 </tr>
                 <tr>
-                    <td class="px-3">Налични Revolut Лидия</td>
+                    <td class="px-3">Лидия</td>
                     <td class="px-3 text-end">@FormatCurrency(summary.RevolutLidiaTotal)</td>
                 </tr>
                 <tr>
-                    <td class="px-3">Налични Revolut Ивайло</td>
+                    <td class="px-3">Ивайло</td>
                     <td class="px-3 text-end">@FormatCurrency(summary.RevolutIvayloTotal)</td>
                 </tr>
                 <tr class="table-light">

@@ -46,7 +46,7 @@ Blazor Server (.NET 10) application for tracking event sales with brand-based pr
 #### First run behaviour
 
 - The app automatically applies pending EF migrations.
-- For an empty database, populate the product catalogue separately, then configure current prices at `/admin/prices`.
+- For an empty database, populate products at `/admin/prices`, then configure prices.
 - Navigate to:
   - `/` for the home weather overview and access to events
   - `/events` to create and manage events/days
@@ -77,6 +77,7 @@ Blazor Server (.NET 10) application for tracking event sales with brand-based pr
   - Expand or collapse event cards independently
   - Real-time sales sync across devices (SignalR push per event day)
 - **Price Management**
+  - Add new products per brand directly at `/admin/prices`
   - Manage current product prices at `/admin/prices`, grouped by brand
   - Add, edit, and remove prices, set units per sale, and choose one default price per product
   - Keep ceramics as free-price products
@@ -108,7 +109,7 @@ Blazor Server (.NET 10) application for tracking event sales with brand-based pr
 ## Migrations & seeding
 
 - The app applies migrations on startup through `DatabaseInitializer`, called from `Program.cs`.
-- Automatic product seeding is currently disabled. `DataSeeder.RunAsync` defines starter products only, without price rules.
+- Automatic product seeding is currently disabled. `DataSeeder.RunAsync` defines starter products only, without price rules. Populate products at `/admin/prices`, then configure prices.
 - Migrations are in `MySalesTracker.Infrastructure/Migrations/`
 - To create a new migration:
   ```bash
@@ -117,7 +118,7 @@ Blazor Server (.NET 10) application for tracking event sales with brand-based pr
 - To recreate a disposable development database:
   - Stop the app and drop the development database
   - Keep the checked-in migration files and model snapshot
-  - Restart the app to recreate the schema, then populate the product catalogue and configure prices
+  - Restart the app to recreate the schema. Populate products at `/admin/prices`, then configure prices.
 
 ## Testing
 
