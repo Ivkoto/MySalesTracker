@@ -14,6 +14,8 @@ public sealed class PriceRule
 
     public Currency Currency { get; init; } = Currency.EUR;
 
+    public PriceList PriceList { get; init; } = PriceList.BG;
+
     public int UnitsPerSale { get; init; }
 
     [ForeignKey("Product")]

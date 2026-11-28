@@ -38,6 +38,11 @@ namespace MySalesTracker.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int>("PriceList")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
 
@@ -157,6 +162,11 @@ namespace MySalesTracker.Infrastructure.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(6,2)");
 
+                    b.Property<int>("PriceList")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
@@ -168,11 +178,11 @@ namespace MySalesTracker.Infrastructure.Migrations
 
                     b.HasKey("PriceRuleId");
 
-                    b.HasIndex("ProductId")
+                    b.HasIndex("ProductId", "PriceList")
                         .IsUnique()
                         .HasFilter("[IsDefault] = 1");
 
-                    b.HasIndex("ProductId", "Price")
+                    b.HasIndex("ProductId", "PriceList", "Price")
                         .IsUnique();
 
                     b.ToTable("PriceRules");

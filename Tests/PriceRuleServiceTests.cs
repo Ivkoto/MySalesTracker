@@ -27,7 +27,7 @@ public sealed class PriceRuleServiceTests
         Assert.Equal("Нов продукт", product.Name);
         Assert.Equal(brand, product.Brand);
 
-        var pricing = Assert.Single(await prices.GetProductPricingAsync(ct));
+        var pricing = Assert.Single(await prices.GetProductPricingAsync(PriceList.BG, ct));
         Assert.Equal(product.Name, pricing.ProductName);
         Assert.Equal(brand, pricing.Brand);
         Assert.Equal(usesFreePrice, pricing.IsFreePrice);
@@ -42,12 +42,14 @@ public sealed class PriceRuleServiceTests
         var service = CreateService(priceRuleRepository, productRepository);
         var request = new UpdateProductPriceRulesRequest(
             1,
+            PriceList.BG,
             [new PriceRuleInput(40m, 1, false), new PriceRuleInput(75m, 2, true)]);
 
         var result = await service.UpdateProductPriceRulesAsync(request, TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
         Assert.Equal(1, priceRuleRepository.SavedProductId);
+        Assert.Equal(PriceList.BG, priceRuleRepository.SavedPriceList);
         Assert.Collection(
             priceRuleRepository.SavedRules,
             first =>
@@ -71,6 +73,7 @@ public sealed class PriceRuleServiceTests
         var service = CreateService(priceRuleRepository, new ProductRepositoryFake(CreateProduct(Brand.Totem)));
         var request = new UpdateProductPriceRulesRequest(
             1,
+            PriceList.BG,
             [new PriceRuleInput(40m, 1, true), new PriceRuleInput(40m, 2, false)]);
 
         var result = await service.UpdateProductPriceRulesAsync(request, TestContext.Current.CancellationToken);
@@ -88,6 +91,7 @@ public sealed class PriceRuleServiceTests
         var service = CreateService(priceRuleRepository, new ProductRepositoryFake(CreateProduct(Brand.Totem)));
         var request = new UpdateProductPriceRulesRequest(
             1,
+            PriceList.BG,
             [new PriceRuleInput(40m, 1, firstDefault), new PriceRuleInput(75m, 2, secondDefault)]);
 
         var result = await service.UpdateProductPriceRulesAsync(request, TestContext.Current.CancellationToken);
@@ -103,6 +107,7 @@ public sealed class PriceRuleServiceTests
         var service = CreateService(priceRuleRepository, new ProductRepositoryFake(CreateProduct(Brand.Ceramics)));
         var request = new UpdateProductPriceRulesRequest(
             1,
+            PriceList.BG,
             [new PriceRuleInput(40m, 1, true)]);
 
         var result = await service.UpdateProductPriceRulesAsync(request, TestContext.Current.CancellationToken);
@@ -120,7 +125,7 @@ public sealed class PriceRuleServiceTests
             CreateRule(10m, true, 1));
         var service = CreateService(new PriceRuleRepositoryFake(), new ProductRepositoryFake(product));
 
-        var result = await service.GetProductPricingAsync(TestContext.Current.CancellationToken);
+        var result = await service.GetProductPricingAsync(PriceList.BG, TestContext.Current.CancellationToken);
 
         var pricing = Assert.Single(result);
         Assert.False(pricing.IsFreePrice);
@@ -143,7 +148,7 @@ public sealed class PriceRuleServiceTests
         };
         var service = CreateService(repository, new ProductRepositoryFake(CreateProduct(Brand.Candles)));
 
-        var result = await service.GetUnitsForProductAsync(1, 30m, TestContext.Current.CancellationToken);
+        var result = await service.GetUnitsForProductAsync(1, PriceList.BG, 30m, TestContext.Current.CancellationToken);
 
         Assert.Equal(3, result);
     }
@@ -155,9 +160,39 @@ public sealed class PriceRuleServiceTests
             new PriceRuleRepositoryFake(),
             new ProductRepositoryFake(CreateProduct(Brand.Candles)));
 
-        var result = await service.GetUnitsForProductAsync(1, 30m, TestContext.Current.CancellationToken);
+        var result = await service.GetUnitsForProductAsync(1, PriceList.BG, 30m, TestContext.Current.CancellationToken);
 
         Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task NewProduct_AppearsInBothLists_AndBGOnlyRuleCannotPriceEUSale()
+    {
+        var rule = new PriceRule
+        {
+            ProductId = 1,
+            PriceList = PriceList.BG,
+            Price = 20m,
+            Currency = Currency.EUR,
+            UnitsPerSale = 2,
+            SortOrder = 1,
+            IsDefault = true
+        };
+        var product = CreateProduct(Brand.Candles, rule);
+        var repository = new PriceRuleRepositoryFake();
+        repository.Rules.Add(rule);
+        var service = CreateService(repository, new ProductRepositoryFake(product));
+        var ct = TestContext.Current.CancellationToken;
+
+        var bg = Assert.Single(await service.GetProductPricingAsync(PriceList.BG, ct));
+        var eu = Assert.Single(await service.GetProductPricingAsync(PriceList.EU, ct));
+
+        Assert.Equal(bg.ProductId, eu.ProductId);
+        Assert.Single(bg.CurrentRules);
+        Assert.Empty(eu.CurrentRules);
+
+        Assert.Equal(2, await service.GetUnitsForProductAsync(product.ProductId, PriceList.BG, 20m, ct));
+        Assert.Null(await service.GetUnitsForProductAsync(product.ProductId, PriceList.EU, 20m, ct));
     }
 
     private static PriceRuleService CreateService(
@@ -192,23 +227,32 @@ public sealed class PriceRuleServiceTests
     private sealed class PriceRuleRepositoryFake : IPriceRuleRepository
     {
         public int? SavedProductId { get; private set; }
+        public PriceList? SavedPriceList { get; private set; }
         public List<PriceRule> SavedRules { get; private set; } = [];
+        public List<PriceRule> Rules { get; } = [];
         public PriceRule? RuleToReturn { get; init; }
 
-        public Task<PriceRule?> GetRuleForProductAsync(int productId, decimal price, CancellationToken ct)
-            => Task.FromResult(RuleToReturn);
+        public Task<PriceRule?> GetRuleForProductAsync(int productId, PriceList priceList, decimal price, CancellationToken ct)
+            => Task.FromResult(
+                Rules.FirstOrDefault(rule =>
+                    rule.ProductId == productId && rule.PriceList == priceList && rule.Price == price)
+                ?? RuleToReturn);
 
-        public Task<List<PriceRule>> GetAllPriceRulesAsync(CancellationToken ct)
+        public Task<List<PriceRule>> GetAllPriceRulesAsync(PriceList priceList, CancellationToken ct)
             => Task.FromResult(new List<PriceRule>());
 
         public Task ReplacePriceRulesAsync(
             int productId,
+            PriceList priceList,
             IReadOnlyCollection<PriceRule> priceRules,
             CancellationToken ct)
         {
             SavedProductId = productId;
+            SavedPriceList = priceList;
             SavedRules = priceRules.ToList();
             return Task.CompletedTask;
         }
     }
 }
+
+

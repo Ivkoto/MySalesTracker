@@ -8,6 +8,10 @@ public sealed class WeatherState
     public int DisplayDays { get; set; } = 3;
     public Coordinates? CurrentLocation { get; set; }
 
+    // Setup runs once per app session and completes only when a location is accepted,
+    // so leaving during the first lookup lets the next visit finish the selection.
+    public bool LocationAttempted { get; set; }
+
     public record Coordinates(double Latitude, double Longitude);
 
     public record HourEntry(DateTime Time, double Temp, double Wind, int Prob, double Mm);

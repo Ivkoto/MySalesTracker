@@ -29,10 +29,10 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<PriceRule>()
-            .HasIndex(r => new { r.ProductId, r.Price })
+            .HasIndex(r => new { r.ProductId, r.PriceList, r.Price })
             .IsUnique();
         b.Entity<PriceRule>()
-            .HasIndex(r => r.ProductId)
+            .HasIndex(r => new { r.ProductId, r.PriceList })
             .IsUnique()
             .HasFilter("[IsDefault] = 1");
         b.Entity<Sale>().HasIndex(s => s.EventDayId);
@@ -64,6 +64,14 @@ public class AppDbContext : DbContext
         b.Entity<Sale>()
             .Property(s => s.Currency)
             .HasDefaultValue(Currency.EUR);
+
+        b.Entity<Event>()
+            .Property(e => e.PriceList)
+            .HasDefaultValue(PriceList.BG);
+
+        b.Entity<PriceRule>()
+            .Property(pr => pr.PriceList)
+            .HasDefaultValue(PriceList.BG);
         
         b.Entity<PriceRule>()
             .Property(pr => pr.Currency)
