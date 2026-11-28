@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.RenderTree;
@@ -181,6 +182,195 @@ public sealed class EventDayTests
         await renderer.CloseAsync(id);
     }
 
+    [Theory]
+    [InlineData(PriceList.BG, "20", 2)]
+    [InlineData(PriceList.EU, "30", 2)]
+    public async Task EventPriceList_DrivesDefaultPriceAndUnits(PriceList priceList, string defaultPrice, int expectedUnits)
+    {
+        var product = new Product { ProductId = 1, Name = "Свещ", Brand = Brand.Totem };
+        var priceRules = CreateTwoListPriceRules(product.ProductId);
+        var saleRepository = new FakeSaleRepository { KnownProducts = [product] };
+        var services = CreateServices(
+            new FakeEventRepository(CreateDay(priceList)),
+            new PickerProductRepositoryFake(product),
+            saleRepository,
+            priceRules);
+
+        await using var renderer = new EventDayRenderer(services);
+        var id = await renderer.OpenAsync(1);
+
+        await renderer.SelectProductAsync(id, "1");
+
+        var priceValues = renderer.SelectOptions(id).Last();
+        Assert.Contains(defaultPrice, priceValues);
+        if (priceList == PriceList.BG)
+        {
+            Assert.DoesNotContain("30", priceValues);
+        }
+
+        await renderer.ClickButtonAsync(id, "Добави");
+
+        var created = saleRepository.CreatedSale;
+        Assert.NotNull(created);
+        Assert.Equal(decimal.Parse(defaultPrice, CultureInfo.InvariantCulture), created!.Price);
+        Assert.Equal(expectedUnits, created.QuantityUnits);
+        await renderer.CloseAsync(id);
+    }
+
+    [Theory]
+    [InlineData(PriceList.BG, 2)]
+    [InlineData(PriceList.EU, 1)]
+    public async Task SaleAtTwentyEuros_RecordsUnitsFromOwnList(PriceList priceList, int expectedUnits)
+    {
+        var product = new Product { ProductId = 1, Name = "Свещ", Brand = Brand.Totem };
+        var saleRepository = new FakeSaleRepository { KnownProducts = [product] };
+        var services = CreateServices(
+            new FakeEventRepository(CreateDay(priceList)),
+            new PickerProductRepositoryFake(product),
+            saleRepository,
+            CreateTwoListPriceRules(product.ProductId));
+
+        await using var renderer = new EventDayRenderer(services);
+        var id = await renderer.OpenAsync(1);
+
+        await renderer.SelectProductAsync(id, "1");
+        await renderer.SelectLastAsync(id, "20");
+        await renderer.ClickButtonAsync(id, "Добави");
+
+        var created = saleRepository.CreatedSale;
+        Assert.NotNull(created);
+        Assert.Equal(20m, created!.Price);
+        Assert.Equal(expectedUnits, created.QuantityUnits);
+        await renderer.CloseAsync(id);
+    }
+
+    [Fact]
+    public async Task EUEvent_CannotPriceFixedPriceProductFromBGOnlyRule()
+    {
+        var product = new Product { ProductId = 1, Name = "Свещ", Brand = Brand.Totem };
+        var priceRules = new FakePriceRuleRepository();
+        priceRules.Rules.Add(CreateRule(product.ProductId, PriceList.BG, 20m, unitsPerSale: 2, isDefault: true));
+        var saleRepository = new FakeSaleRepository();
+        var services = CreateServices(
+            new FakeEventRepository(CreateDay(PriceList.EU)),
+            new PickerProductRepositoryFake(product),
+            saleRepository,
+            priceRules);
+
+        await using var renderer = new EventDayRenderer(services);
+        var id = await renderer.OpenAsync(1);
+
+        await renderer.SelectProductAsync(id, "1");
+
+        Assert.Contains("Няма настроена цена", renderer.Text(id));
+        Assert.DoesNotContain("20", renderer.SelectOptions(id).Last());
+        Assert.Null(saleRepository.CreatedSale);
+        await renderer.CloseAsync(id);
+    }
+
+    [Fact]
+    public async Task EUEvent_CeramicsSaleUsesManualPrice()
+    {
+        var product = new Product { ProductId = 1, Name = "Купа", Brand = Brand.Ceramics };
+        var saleRepository = new FakeSaleRepository { KnownProducts = [product] };
+        var services = CreateServices(
+            new FakeEventRepository(CreateDay(PriceList.EU)),
+            new PickerProductRepositoryFake(product),
+            saleRepository,
+            new FakePriceRuleRepository());
+
+        await using var renderer = new EventDayRenderer(services);
+        var id = await renderer.OpenAsync(1);
+
+        await renderer.SelectProductAsync(id, "1");
+        Assert.True(renderer.HasInputWithPlaceholder(id, "Цена…"));
+
+        await renderer.TypeIntoAsync(id, "Цена…", "12,50");
+        await renderer.ClickButtonAsync(id, "Добави");
+
+        var created = saleRepository.CreatedSale;
+        Assert.NotNull(created);
+        Assert.Equal(12.5m, created!.Price);
+        Assert.Equal(1, created.QuantityUnits);
+        await renderer.CloseAsync(id);
+    }
+
+    [Fact]
+    public async Task PriceChange_KeepsRecordedPriceAndUnits_UntilAnotherPriceIsChosen()
+    {
+        var product = new Product { ProductId = 1, Name = "Свещ", Brand = Brand.Totem };
+        var sale = CreateSale(10, product, price: 20m, quantityUnits: 2);
+        var priceRules = new FakePriceRuleRepository();
+        priceRules.Rules.Add(CreateRule(product.ProductId, PriceList.BG, 20m, unitsPerSale: 2, isDefault: true));
+        var saleRepository = new FakeSaleRepository(sale);
+        var services = CreateServices(
+            new FakeEventRepository(CreateDay()),
+            new PickerProductRepositoryFake(product),
+            saleRepository,
+            priceRules);
+
+        // The configured rule changes after the sale was recorded.
+        priceRules.Rules.Clear();
+        priceRules.Rules.Add(CreateRule(product.ProductId, PriceList.BG, 25m, unitsPerSale: 3, isDefault: true));
+
+        await using var renderer = new EventDayRenderer(services);
+        var id = await renderer.OpenAsync(1);
+
+        await renderer.ClickEditAsync(id);
+        await renderer.TypeIntoAsync(id, "Отстъпка…", "1,50");
+        await renderer.ClickButtonAsync(id, "Запази");
+
+        var discountOnly = saleRepository.UpdatedSale;
+        Assert.NotNull(discountOnly);
+        Assert.Equal(20m, discountOnly!.Price);
+        Assert.Equal(2, discountOnly.QuantityUnits);
+        Assert.Equal(1.5m, discountOnly.DiscountValue);
+
+        await WaitForButtonAsync(renderer, id, "Добави");
+
+        await renderer.ClickEditAsync(id);
+        await renderer.SelectLastAsync(id, "25");
+        await renderer.ClickButtonAsync(id, "Запази");
+
+        var reprice = saleRepository.UpdatedSale;
+        Assert.NotNull(reprice);
+        Assert.Equal(25m, reprice!.Price);
+        Assert.Equal(3, reprice.QuantityUnits);
+        await renderer.CloseAsync(id);
+    }
+
+    static FakePriceRuleRepository CreateTwoListPriceRules(int productId)
+    {
+        var priceRules = new FakePriceRuleRepository();
+        priceRules.Rules.Add(CreateRule(productId, PriceList.BG, 20m, unitsPerSale: 2, isDefault: true));
+        priceRules.Rules.Add(CreateRule(productId, PriceList.EU, 30m, unitsPerSale: 2, isDefault: true));
+        priceRules.Rules.Add(CreateRule(productId, PriceList.EU, 20m, unitsPerSale: 1, isDefault: false));
+        return priceRules;
+    }
+
+    static PriceRule CreateRule(int productId, PriceList priceList, decimal price, int unitsPerSale, bool isDefault)
+        => new()
+        {
+            ProductId = productId,
+            PriceList = priceList,
+            Price = price,
+            Currency = Currency.EUR,
+            UnitsPerSale = unitsPerSale,
+            SortOrder = price == 20m ? 1 : 2,
+            IsDefault = isDefault
+        };
+
+    static async Task WaitForButtonAsync(EventDayRenderer renderer, int id, string text)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        while (!await renderer.Dispatcher.InvokeAsync(() => renderer.Text(id).Contains(text, StringComparison.Ordinal)))
+        {
+            await Task.Delay(25, timeout.Token);
+        }
+    }
+
     static ServiceProvider CreateServices(
         IEventRepository eventRepository,
         IProductRepository productRepository,
@@ -197,7 +387,7 @@ public sealed class EventDayTests
             .AddSingleton<IJSRuntime>(new EventDayJsFake())
             .BuildServiceProvider();
 
-    static MySalesTracker.Domain.Entities.EventDay CreateDay()
+    static MySalesTracker.Domain.Entities.EventDay CreateDay(PriceList priceList = PriceList.BG)
         => new()
         {
             EventDayId = 1,
@@ -208,7 +398,8 @@ public sealed class EventDayTests
                 EventId = 1,
                 Name = "Базар",
                 StartDate = new DateOnly(2026, 11, 5),
-                EndDate = new DateOnly(2026, 11, 8)
+                EndDate = new DateOnly(2026, 11, 8),
+                PriceList = priceList
             }
         };
 
@@ -291,6 +482,10 @@ public sealed class EventDayTests
 
         public Sale? UpdatedSale { get; private set; }
 
+        public Sale? CreatedSale { get; private set; }
+
+        public IReadOnlyList<Product> KnownProducts { get; init; } = [];
+
         public Task<List<Sale>> GetSalesByEventDay(int eventDayId, CancellationToken ct = default)
             => Task.FromResult(sales.Where(sale => sale.EventDayId == eventDayId).ToList());
 
@@ -299,8 +494,33 @@ public sealed class EventDayTests
 
         public Task<Sale> CreateSaleAsync(Sale sale, CancellationToken ct = default)
         {
-            sales.Add(sale);
-            return Task.FromResult(sale);
+            var stored = WithKnownProduct(sale);
+            sales.Add(stored);
+            CreatedSale = stored;
+            return Task.FromResult(stored);
+        }
+
+        Sale WithKnownProduct(Sale sale)
+        {
+            var product = KnownProducts.FirstOrDefault(candidate => candidate.ProductId == sale.ProductId);
+            if (product is null)
+            {
+                return sale;
+            }
+
+            return new Sale
+            {
+                SaleId = sale.SaleId,
+                EventDayId = sale.EventDayId,
+                ProductId = sale.ProductId,
+                Product = product,
+                Price = sale.Price,
+                QuantityUnits = sale.QuantityUnits,
+                DiscountValue = sale.DiscountValue,
+                Notes = sale.Notes,
+                Currency = sale.Currency,
+                CreatedUtc = sale.CreatedUtc
+            };
         }
 
         public Task<Sale> UpdateSaleAsync(
@@ -339,15 +559,16 @@ public sealed class EventDayTests
     {
         public List<PriceRule> Rules { get; } = [];
 
-        public Task<PriceRule?> GetRuleForProductAsync(int productId, decimal price, CancellationToken ct)
-            => Task.FromResult(Rules.FirstOrDefault(rule => rule.ProductId == productId && rule.Price == price));
+        public Task<PriceRule?> GetRuleForProductAsync(int productId, PriceList priceList, decimal price, CancellationToken ct)
+            => Task.FromResult(Rules.FirstOrDefault(rule =>
+                rule.ProductId == productId && rule.PriceList == priceList && rule.Price == price));
 
-        public Task<List<PriceRule>> GetAllPriceRulesAsync(CancellationToken ct)
-            => Task.FromResult(Rules.ToList());
+        public Task<List<PriceRule>> GetAllPriceRulesAsync(PriceList priceList, CancellationToken ct)
+            => Task.FromResult(Rules.Where(rule => rule.PriceList == priceList).ToList());
 
-        public Task ReplacePriceRulesAsync(int productId, IReadOnlyCollection<PriceRule> priceRules, CancellationToken ct)
+        public Task ReplacePriceRulesAsync(int productId, PriceList priceList, IReadOnlyCollection<PriceRule> priceRules, CancellationToken ct)
         {
-            Rules.RemoveAll(rule => rule.ProductId == productId);
+            Rules.RemoveAll(rule => rule.ProductId == productId && rule.PriceList == priceList);
             Rules.AddRange(priceRules);
             return Task.CompletedTask;
         }
@@ -409,6 +630,76 @@ public sealed class EventDayTests
             {
                 var handler = Elements(id, "select").First().Single(frame => frame.AttributeName == "onchange");
                 return DispatchEventAsync(handler.AttributeEventHandlerId, null, new ChangeEventArgs { Value = value });
+            });
+
+        public IReadOnlyList<IReadOnlyList<string>> SelectOptions(int id)
+        {
+            var frames = Frames(id).ToArray();
+            var selects = new List<IReadOnlyList<string>>();
+            for (var index = 0; index < frames.Length; index++)
+            {
+                if (frames[index].FrameType != RenderTreeFrameType.Element || frames[index].ElementName != "select")
+                {
+                    continue;
+                }
+
+                var subtree = frames.Skip(index + 1).Take(frames[index].ElementSubtreeLength - 1).ToArray();
+                var values = new List<string>();
+                for (var nested = 0; nested < subtree.Length; nested++)
+                {
+                    if (subtree[nested].FrameType != RenderTreeFrameType.Element || subtree[nested].ElementName != "option")
+                    {
+                        continue;
+                    }
+
+                    var attributes = subtree.Skip(nested + 1)
+                        .TakeWhile(frame => frame.FrameType == RenderTreeFrameType.Attribute)
+                        .ToArray();
+                    values.Add(Attribute(attributes, "value") ?? string.Empty);
+                }
+
+                selects.Add(values);
+            }
+
+            return selects;
+        }
+
+        public Task SelectLastAsync(int id, string value)
+            => Dispatcher.InvokeAsync(() =>
+            {
+                var handler = Elements(id, "select").Last().Single(frame => frame.AttributeName == "onchange");
+                return DispatchEventAsync(handler.AttributeEventHandlerId, null, new ChangeEventArgs { Value = value });
+            });
+
+        public Task TypeIntoAsync(int id, string placeholder, string value)
+            => Dispatcher.InvokeAsync(() =>
+            {
+                var frames = Frames(id).ToArray();
+                for (var index = 0; index < frames.Length; index++)
+                {
+                    if (frames[index].FrameType != RenderTreeFrameType.Element || frames[index].ElementName != "input")
+                    {
+                        continue;
+                    }
+
+                    var attributes = frames.Skip(index + 1)
+                        .TakeWhile(frame => frame.FrameType == RenderTreeFrameType.Attribute)
+                        .ToArray();
+                    if (Attribute(attributes, "placeholder") != placeholder)
+                    {
+                        continue;
+                    }
+
+                    var handler = attributes.FirstOrDefault(frame => frame.AttributeName == "oninput");
+                    if (handler.AttributeEventHandlerId == 0)
+                    {
+                        handler = attributes.First(frame => frame.AttributeName == "onchange");
+                    }
+
+                    return DispatchEventAsync(handler.AttributeEventHandlerId, null, new ChangeEventArgs { Value = value });
+                }
+
+                throw new InvalidOperationException($"Input not found: {placeholder}");
             });
 
         public string Text(int id)
@@ -495,4 +786,5 @@ public sealed class EventDayTests
     }
 #pragma warning restore BL0006
 }
+
 

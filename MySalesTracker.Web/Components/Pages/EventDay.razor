@@ -20,7 +20,7 @@ else
         <a href="/day/@id/summary" class="btn btn-outline-primary">Дневен Отчет</a>
     </div>
 
-    <p><a href="/events">⬅️ Събития</a> | @day.Event.Name</p>
+    <p><a href="/events">⬅️ Събития</a> | @day.Event.Name | @day.Event.PriceList.GetDisplayName()</p>
 
     <div class="mb-2 d-flex gap-3 flex-wrap align-items-center">
         @if (!editingSaleId.HasValue)
@@ -245,6 +245,8 @@ else
 
     Product? productInContext => editingSaleId.HasValue ? editingProduct : selectedProduct;
 
+    PriceList EventPriceList => day?.Event.PriceList ?? PriceList.BG;
+
     string GetProductOptionLabel(Product product)
     {
         var sharesName = products.Any(other => other.Brand != product.Brand &&
@@ -259,7 +261,7 @@ else
 
         products = await ProductSvc.GetActiveProductsAsync();
 
-        allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync();
+        allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync(EventPriceList);
 
         await ReloadSalesAsync();
         await EnsureHubConnectionAsync();
@@ -267,7 +269,7 @@ else
 
     async Task OnProductChanged()
     {
-        allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync();
+        allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync(EventPriceList);
 
         if (selectedProduct?.Brand == Brand.Ceramics)
         {
@@ -284,6 +286,13 @@ else
             price = priceOptions.FirstOrDefault(r => r.IsDefault)?.Price
                     ?? priceOptions.FirstOrDefault()?.Price;
             priceText = null;
+
+            if (productId is not null && priceOptions.Count == 0)
+            {
+                validationMessage = NoPriceMessage(selectedProduct, EventPriceList);
+                StateHasChanged();
+                return;
+            }
         }
 
         ClearValidationMessage();
@@ -350,17 +359,19 @@ else
         }
         else
         {
-            var configuredUnits = await PriceRuleSvc.GetUnitsForProductAsync(productId.Value, price.Value);
+            var configuredUnits = await PriceRuleSvc.GetUnitsForProductAsync(productId.Value, EventPriceList, price.Value);
             if (!configuredUnits.HasValue)
             {
-                allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync();
+                allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync(EventPriceList);
                 priceOptions = allPriceRules
                     .Where(rule => rule.ProductId == productId.Value)
                     .OrderBy(rule => rule.SortOrder)
                     .ToList();
                 price = priceOptions.FirstOrDefault(rule => rule.IsDefault)?.Price
                     ?? priceOptions.FirstOrDefault()?.Price;
-                validationMessage = "Цените са променени. Избери актуална цена и опитай отново.";
+                validationMessage = priceOptions.Count == 0
+                    ? NoPriceMessage(productInContext, EventPriceList)
+                    : "Цените са променени. Избери актуална цена и опитай отново.";
                 return;
             }
 
@@ -465,6 +476,9 @@ else
     {
         validationMessage = null;
     }
+
+    static string NoPriceMessage(Product? product, PriceList priceList)
+        => $"Няма настроена цена за {product?.Name ?? "продукта"} в ценова листа {priceList.GetDisplayName()}.";
 
     string FormatCurrency(decimal value, Currency currency)
         => $"{value.ToString("0.00", Bg)} {currency.GetDisplayName()}";
@@ -579,7 +593,7 @@ else
         editingOriginalPrice = sale.Price;
         editingOriginalQuantityUnits = sale.QuantityUnits;
 
-        allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync();
+        allPriceRules = await PriceRuleSvc.GetAllPriceRulesAsync(EventPriceList);
         priceOptions = allPriceRules
             .Where(rule => rule.ProductId == sale.ProductId)
             .OrderBy(rule => rule.SortOrder)

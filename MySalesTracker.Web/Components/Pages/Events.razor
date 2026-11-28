@@ -26,6 +26,15 @@
         <input type="date" class="form-control" style="width: 9rem; height: 2.75rem" @bind="start" />
         <input type="date" class="form-control" style="width: 9rem; height: 2.75rem" @bind="end" />
     </div>
+    <div class="mb-3 d-flex gap-3 flex-wrap align-items-center">
+        <label class="form-label mb-0" for="create-price-list">Ценова листа</label>
+        <select id="create-price-list" class="form-select" style="width: 7rem; height: 2.75rem" @bind="priceList">
+            @foreach (var list in PriceListOrder)
+            {
+                <option value="@list">@list.GetDisplayName()</option>
+            }
+        </select>
+    </div>
 }
 
 @if (!string.IsNullOrEmpty(errorMessage))
@@ -60,6 +69,7 @@
                 <div class="event-card-dates">
                     <span>@b.StartDate</span>
                     <span>@b.EndDate</span>
+                    <span class="event-card-price-list">@b.PriceList.GetDisplayName()</span>
                 </div>
                 <div class="event-card-actions">
                     <a href="@($"/event/{b.EventId}/summary")"
@@ -81,9 +91,12 @@
 </section>
 
 @code {
+  static readonly PriceList[] PriceListOrder = [PriceList.BG, PriceList.EU];
+
   string name = $"Базар {DateOnly.FromDateTime(DateTime.Today)}";
   DateOnly start = DateOnly.FromDateTime(DateTime.Today);
   DateOnly end = DateOnly.FromDateTime(DateTime.Today);
+  PriceList priceList = PriceList.BG;
   List<Domain.Entities.Event> events = new();
   string? errorMessage;
   DateOnly today = DateOnly.FromDateTime(DateTime.Today);
@@ -146,11 +159,12 @@
     name = $"Базар {todayDate}";
     start = todayDate;
     end = todayDate;
+    priceList = PriceList.BG;
   }
 
   async Task Create()
   {      
-    var result = await EventSvc.CreateEventAsync(name, start, end);
+    var result = await EventSvc.CreateEventAsync(name, start, end, priceList);
     if (!result.Success)
     {
       errorMessage = result.ErrorMessage;
@@ -167,7 +181,7 @@
         /* TODO: @IvayloK - replace the lines above if you need to reload all the events and keep the data updated on all the devices
         in cases where other users might have created events simultaneously. This come along with creating of a new SignalR notification
         to all the connected to the app clients. Once uncomenting this one, make sure a new method is created in the SignalRNotificationService*/
-      //await EventSvc.CreateEventAsync(name, start, end);
+      //await EventSvc.CreateEventAsync(name, start, end, priceList);
       //events = await EventSvc.GetAllEventsAsync(); // Reload all events
 
       // Reset form

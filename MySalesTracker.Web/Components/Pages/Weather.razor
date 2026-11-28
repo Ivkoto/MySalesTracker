@@ -198,10 +198,13 @@
     int selectedDayIndex;
     bool isLoading;
     bool isLocating;
+    bool isSearching;
     bool isDisposed;
     bool shouldPositionHourlyForecast;
+    int selectionVersion;
+    int searchRequestId;
     ElementReference hourlyScroller;
-    bool IsBusy => isLoading || isLocating;
+    bool IsBusy => isLoading || isLocating || isSearching;
 
     public sealed record LocationResult(double Latitude, double Longitude, string? Error, string? City = null);
 
@@ -261,11 +264,21 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && summary is null)
+        if (firstRender)
         {
-            await Load();
-            StateHasChanged();
-            return;
+            if (!State.LocationAttempted)
+            {
+                await TryInitialLocation();
+            }
+            else if (summary is null)
+            {
+                await Load();
+                if (!isDisposed)
+                {
+                    StateHasChanged();
+                }
+                return;
+            }
         }
 
         if (shouldPositionHourlyForecast && summary is not null)
@@ -280,14 +293,123 @@
         }
     }
 
+    async Task TryInitialLocation()
+    {
+        var version = ++selectionVersion;
+        LocationResult? location = null;
+
+        try
+        {
+            location = await JS.InvokeAsync<LocationResult>("weatherLocation.getCurrent");
+        }
+        catch (JSException)
+        {
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+        if (isDisposed || version != selectionVersion)
+        {
+            return;
+        }
+
+        if (location is { Error: null } && !string.IsNullOrWhiteSpace(location.City))
+        {
+            State.CurrentLocation = new WeatherState.Coordinates(location.Latitude, location.Longitude);
+            State.City = city = location.City.Trim();
+            State.Store(null);
+            summary = null;
+            State.LocationAttempted = true;
+            await Load();
+            if (!isDisposed)
+            {
+                StateHasChanged();
+            }
+            return;
+        }
+
+        var savedCity = await GetSavedCity();
+        if (isDisposed || version != selectionVersion)
+        {
+            return;
+        }
+
+        savedCity = savedCity?.Trim();
+        var useSavedCity = false;
+        if (!string.IsNullOrWhiteSpace(savedCity)
+            && !string.Equals(State.City, savedCity, StringComparison.OrdinalIgnoreCase))
+        {
+            useSavedCity = true;
+            State.CurrentLocation = null;
+            State.City = city = savedCity;
+            State.Store(null);
+            summary = null;
+        }
+
+        if (summary is null && !await Load() && useSavedCity)
+        {
+            if (isDisposed || version != selectionVersion)
+            {
+                return;
+            }
+
+            // The saved city cannot be resolved; the Sofia default is the last resort.
+            State.CurrentLocation = null;
+            State.City = city = "Sofia";
+            State.Store(null);
+            summary = null;
+            await Load();
+        }
+
+        if (isDisposed || version != selectionVersion)
+        {
+            return;
+        }
+
+        State.LocationAttempted = summary is not null;
+        StateHasChanged();
+    }
+
+    async Task<string?> GetSavedCity()
+    {
+        try
+        {
+            return await JS.InvokeAsync<string?>("weatherLocation.getSavedCity");
+        }
+        catch (JSException)
+        {
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    async Task RememberCity(string selectedCity)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("weatherLocation.saveCity", selectedCity);
+        }
+        catch (JSException)
+        {
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
     async Task UseCurrentLocation()
     {
         error = null;
         isLocating = true;
+        var version = ++selectionVersion;
         try
         {
             var location = await JS.InvokeAsync<LocationResult>("weatherLocation.getCurrent");
-            if (isDisposed)
+            if (isDisposed || version != selectionVersion)
             {
                 return;
             }
@@ -311,6 +433,7 @@
             State.City = city = location.City!.Trim();
             State.Store(null);
             summary = null;
+            State.LocationAttempted = true;
             await Load();
         }
         catch (JSException)
@@ -336,23 +459,80 @@
             return;
         }
 
-        if (State.CurrentLocation is not null && string.Equals(State.City, city, StringComparison.OrdinalIgnoreCase))
+        var requestedCity = city;
+
+        // A search for the detected city keeps its exact device coordinates.
+        var detectedLocation = State.CurrentLocation is not null
+            && string.Equals(State.City, requestedCity, StringComparison.OrdinalIgnoreCase)
+                ? State.CurrentLocation
+                : null;
+
+        // Resolve every manual forecast through the same flow. A failed search must leave
+        // the automatic device or saved-city lookup running, so only a successful search
+        // advances selectionVersion.
+        var requestId = ++searchRequestId;
+        var requestedDays = Math.Clamp(displayDays, 1, MaxForecastDays);
+        isLoading = true;
+        isSearching = true;
+        error = null;
+        StateHasChanged();
+
+        Summary? found = null;
+        WeatherState.CurrentCondition? current = null;
+        string? failure = null;
+        try
         {
-            await Load();
+            var fetched = await FetchSummaryAsync(requestedCity, detectedLocation, requestedDays);
+            found = fetched.Summary;
+            current = fetched.Current;
+            failure = fetched.Error;
+        }
+        catch
+        {
+            failure = "Прогнозата не можа да бъде заредена.";
+        }
+        finally
+        {
+            isLoading = false;
+            if (requestId == searchRequestId)
+            {
+                // A superseded search must not unlock the page while the latest one is pending.
+                isSearching = false;
+            }
+        }
+
+        if (isDisposed || requestId != searchRequestId)
+        {
+            // Only the latest search on a live page may show an error, commit, or save the city.
             return;
         }
 
-        if (State.CurrentLocation is not null || State.City != city)
+        if (found is null)
         {
-            State.Store(null);
-            summary = null;
+            error = failure;
+            // Keep the current selection; only restore the input text to it.
+            if (!string.IsNullOrWhiteSpace(State.City))
+            {
+                city = State.City;
+            }
+            StateHasChanged();
+            return;
         }
-        State.CurrentLocation = null;
-        await Load();
+
+        // A successful manual search supersedes any lookup that was still in flight.
+        selectionVersion++;
+        State.LocationAttempted = true;
+        State.CurrentLocation = detectedLocation;
+        State.City = city = requestedCity;
+        error = null;
+        CommitSummary(found, current);
+        await RememberCity(requestedCity);
+        StateHasChanged();
     }
 
-    async Task Load()
+    async Task<bool> Load()
     {
+        var version = selectionVersion;
         error = null;
         var requestedLocation = State.CurrentLocation;
 
@@ -362,7 +542,7 @@
             if (string.IsNullOrWhiteSpace(city))
             {
                 error = "Трябва да бъде въведен град.";
-                return;
+                return false;
             }
             State.City = city;
         }
@@ -380,109 +560,136 @@
         StateHasChanged();
         try
         {
-            var geo = requestedLocation is null
-                ? await WeatherSvc.FetchGeocode(requestedCity)
-                : (requestedLocation.Latitude, requestedLocation.Longitude, requestedCity);
+            var fetched = await FetchSummaryAsync(requestedCity, requestedLocation, requestedDays);
 
-            if (geo is null)
-            {
-                error = "Градът не е намерен.";
-                return;
-            }
-
-            var (lat, lon, name) = geo.Value;
-            var forecast = await WeatherSvc.GetForecast(lat, lon, requestedDays);
-
-            if (forecast?.Hours is null || forecast.Hours.Count == 0)
-            {
-                error = "Няма данни за метеорологичната прогноза.";
-                return;
-            }
-
-            var maxHours = Math.Min(requestedDays * HoursPerDay, forecast.Hours.Count);
-            var parsedHours = new List<(DateTime Date, HourEntry Hour)>();
-
-            for (var i = 0; i < maxHours; i++)
-            {
-                var hour = forecast.Hours[i];
-                parsedHours.Add((
-                    hour.Time.Date,
-                    new HourEntry(
-                        hour.Time,
-                        hour.Temperature,
-                        hour.WindSpeed,
-                        hour.PrecipitationProbability,
-                        hour.Precipitation)));
-            }
-
-            if (parsedHours.Count == 0)
-            {
-                error = "Няма налични метеорологични данни.";
-                return;
-            }
-
-            var daySummaries = parsedHours
-                .GroupBy(entry => entry.Date)
-                .OrderBy(group => group.Key)
-                .Take(requestedDays)
-                .Select(group => new DayForecast(
-                    DateOnly.FromDateTime(group.Key),
-                    group.Select(entry => entry.Hour).ToList()))
-                .ToList();
-
-            if (daySummaries.Count == 0)
-            {
-                error = "Няма налични метеорологични данни.";
-                return;
-            }
-
-            if (isDisposed || State.City != requestedCity || State.DisplayDays != requestedDays
+            // A request that no longer matches the current selection must not show an error or commit.
+            if (isDisposed || version != selectionVersion
+                || State.City != requestedCity || State.DisplayDays != requestedDays
                 || State.CurrentLocation != requestedLocation)
             {
-                return;
+                return false;
             }
 
-            summary = new Summary(
-                name ?? requestedCity,
-                lat,
-                lon,
-                daySummaries,
-                forecast.Current?.Time,
-                forecast.TimeZone);
-            selectedDayIndex = 0;
-            shouldPositionHourlyForecast = true;
+            if (fetched.Summary is null)
+            {
+                error = fetched.Error;
+                return false;
+            }
 
-            State.Store(
-                new WeatherState.Summary(
-                    summary.Name,
-                    summary.Lat,
-                    summary.Lon,
-                    daySummaries
-                        .Select(day => new WeatherState.DaySummary(
-                            day.Date,
-                            day.Hours.Select(hour => new WeatherState.HourEntry(
-                                hour.Time,
-                                hour.Temp,
-                                hour.Wind,
-                                hour.Prob,
-                                hour.Mm)).ToList()))
-                        .ToList(),
-                    forecast.Current is null
-                        ? null
-                        : new WeatherState.CurrentCondition(
-                            forecast.Current.Time,
-                            forecast.Current.Temperature,
-                            forecast.Current.Rainfall),
-                    forecast.TimeZone));
+            CommitSummary(fetched.Summary, fetched.Current);
+            return true;
         }
         catch
         {
-            error = "Прогнозата не можа да бъде заредена.";
+            if (!isDisposed && version == selectionVersion)
+            {
+                error = "Прогнозата не можа да бъде заредена.";
+            }
+            return false;
         }
         finally
         {
             isLoading = false;
         }
+    }
+
+    async Task<(Summary? Summary, WeatherState.CurrentCondition? Current, string? Error)> FetchSummaryAsync(
+        string requestedCity,
+        WeatherState.Coordinates? requestedLocation,
+        int requestedDays)
+    {
+        var geo = requestedLocation is null
+            ? await WeatherSvc.FetchGeocode(requestedCity)
+            : (requestedLocation.Latitude, requestedLocation.Longitude, requestedCity);
+
+        if (geo is null)
+        {
+            return (null, null, "Градът не е намерен.");
+        }
+
+        var (lat, lon, name) = geo.Value;
+        var forecast = await WeatherSvc.GetForecast(lat, lon, requestedDays);
+
+        if (forecast?.Hours is null || forecast.Hours.Count == 0)
+        {
+            return (null, null, "Няма данни за метеорологичната прогноза.");
+        }
+
+        var maxHours = Math.Min(requestedDays * HoursPerDay, forecast.Hours.Count);
+        var parsedHours = new List<(DateTime Date, HourEntry Hour)>();
+
+        for (var i = 0; i < maxHours; i++)
+        {
+            var hour = forecast.Hours[i];
+            parsedHours.Add((
+                hour.Time.Date,
+                new HourEntry(
+                    hour.Time,
+                    hour.Temperature,
+                    hour.WindSpeed,
+                    hour.PrecipitationProbability,
+                    hour.Precipitation)));
+        }
+
+        if (parsedHours.Count == 0)
+        {
+            return (null, null, "Няма налични метеорологични данни.");
+        }
+
+        var daySummaries = parsedHours
+            .GroupBy(entry => entry.Date)
+            .OrderBy(group => group.Key)
+            .Take(requestedDays)
+            .Select(group => new DayForecast(
+                DateOnly.FromDateTime(group.Key),
+                group.Select(entry => entry.Hour).ToList()))
+            .ToList();
+
+        if (daySummaries.Count == 0)
+        {
+            return (null, null, "Няма налични метеорологични данни.");
+        }
+
+        return (
+            new Summary(
+                name ?? requestedCity,
+                lat,
+                lon,
+                daySummaries,
+                forecast.Current?.Time,
+                forecast.TimeZone),
+            forecast.Current is null
+                ? null
+                : new WeatherState.CurrentCondition(
+                    forecast.Current.Time,
+                    forecast.Current.Temperature,
+                    forecast.Current.Rainfall),
+            null);
+    }
+
+    void CommitSummary(Summary loaded, WeatherState.CurrentCondition? current)
+    {
+        summary = loaded;
+        selectedDayIndex = 0;
+        shouldPositionHourlyForecast = true;
+
+        State.Store(
+            new WeatherState.Summary(
+                loaded.Name,
+                loaded.Lat,
+                loaded.Lon,
+                loaded.Days
+                    .Select(day => new WeatherState.DaySummary(
+                        day.Date,
+                        day.Hours.Select(hour => new WeatherState.HourEntry(
+                            hour.Time,
+                            hour.Temp,
+                            hour.Wind,
+                            hour.Prob,
+                            hour.Mm)).ToList()))
+                    .ToList(),
+                current,
+                loaded.TimeZone));
     }
 
     public void Dispose() => isDisposed = true;

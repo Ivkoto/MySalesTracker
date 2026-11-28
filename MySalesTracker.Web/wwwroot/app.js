@@ -6,6 +6,29 @@ window.selectAllText = function (element) {
 };
 
 window.weatherLocation = {
+    storageKey: "weather.lastCity",
+
+    getSavedCity: function () {
+        try {
+            const city = window.localStorage.getItem(window.weatherLocation.storageKey);
+            return city && city.trim() ? city : null;
+        } catch {
+            return null;
+        }
+    },
+
+    saveCity: function (city) {
+        if (!city) {
+            return;
+        }
+
+        try {
+            window.localStorage.setItem(window.weatherLocation.storageKey, city);
+        } catch {
+            // Storage can be unavailable (private mode, blocked cookies); the session still works.
+        }
+    },
+
     getCurrent: function () {
         if (!window.isSecureContext) {
             return Promise.resolve({ error: "insecure" });

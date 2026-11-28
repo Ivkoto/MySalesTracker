@@ -143,6 +143,13 @@
     display: block;
 }
 
+.event-card-dates .event-card-price-list {
+    margin-top: 0.2rem;
+    color: #1769aa;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
 .event-card-actions {
     display: flex;
     align-items: center;

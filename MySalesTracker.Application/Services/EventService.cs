@@ -63,7 +63,8 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     /// <param name="name">The name of the event.</param>
     /// <param name="startDate">The start date of the event.</param>
     /// <param name="endDate">The end date of the event.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="priceList">The price list the event sells from.</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The newly created <see cref="Event"/> with auto-generated <see cref="EventDay"/> entries
     /// for each day in the specified range (inclusive).
@@ -71,7 +72,7 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
     /// <exception cref="ArgumentException">
     /// Thrown when name is empty or whitespace, or when end date is before start date.
     /// </exception>
-    public async Task<ServiceResult<Event>> CreateEventAsync(string name, DateOnly startDate, DateOnly endDate, CancellationToken ct = default)
+    public async Task<ServiceResult<Event>> CreateEventAsync(string name, DateOnly startDate, DateOnly endDate, PriceList priceList, CancellationToken ct = default)
     {
         try
         {
@@ -84,9 +85,9 @@ public sealed class EventService(IEventRepository eventRepository, ILogger<Event
                 return ServiceResult<Event>.FailureResult(validation.ErrorMessage);
             }                
 
-            logger.LogInformation("Creating event '{Name}' from {StartDate} to {EndDate}", name, startDate, endDate);
+            logger.LogInformation("Creating event '{Name}' from {StartDate} to {EndDate} with {PriceList} prices", name, startDate, endDate, priceList);
 
-            var evt = new Event { Name = name, StartDate = startDate, EndDate = endDate };
+            var evt = new Event { Name = name, StartDate = startDate, EndDate = endDate, PriceList = priceList };
             var dates = EventValidations.GenerateDateRange(startDate, endDate);
             foreach (var date in dates)
             {

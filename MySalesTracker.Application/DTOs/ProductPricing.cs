@@ -18,6 +18,7 @@ public sealed record PriceRuleDetails(
 
 public sealed record UpdateProductPriceRulesRequest(
     int ProductId,
+    PriceList PriceList,
     IReadOnlyList<PriceRuleInput> Rules);
 
 public sealed record PriceRuleInput(decimal Price, int UnitsPerSale, bool IsDefault);

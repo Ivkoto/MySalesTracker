@@ -72,17 +72,20 @@ Blazor Server (.NET 10) application for tracking event sales with brand-based pr
   - Health checks and service discovery
 - **Event Management**
   - Create events with date ranges
+  - Choose the price list (**BG** or **EU**) for each event; the event keeps it for all its days
   - Auto-generate event days
   - Expand the two events with the latest end dates by default when the page opens
   - Expand or collapse event cards independently
   - Real-time sales sync across devices (SignalR push per event day)
 - **Price Management**
-  - Add new products per brand directly at `/admin/prices`
-  - Manage current product prices at `/admin/prices`, grouped by brand
-  - Add, edit, and remove prices, set units per sale, and choose one default price per product
+  - Two price lists, **BG** and **EU**, over one shared product catalogue
+  - Add new products per brand directly at `/admin/prices`; a product is available in both lists
+  - Manage the prices of the selected list at `/admin/prices`, grouped by brand
+  - Add, edit, and remove prices, set units per sale, and choose one default price per product per list
   - Keep ceramics as free-price products
   - Preserve the price recorded on historical sales when current prices change
 - **Sales Entry**
+  - Prices come from the price list of the event being sold
   - Sales entry per product with brand-based rules
   - `Керамика` (ceramics): manual price entry with decimal keypad on mobile
   - `Свещи/Гора` and `Тотем`: select price from rules; the selected price is the total for the units
@@ -100,6 +103,8 @@ Blazor Server (.NET 10) application for tracking event sales with brand-based pr
 - **Weather forecast**
   - Open-Meteo forecasts for 1 to 10 days, with 3 days selected by default
   - City search and current-location selection with browser permission
+  - Try device location on the first forecast visit per session, then fall back to the last searched city in browser storage, or Sofia
+  - Remember the last successful city search per browser for later fallback
   - Daily and hourly temperature, wind, rain probability, and precipitation amounts
   - Colour-coded bars showing hourly rainfall amounts
   - Position today's hourly forecast at the selected city's current hour and keep the current-hour marker updated
@@ -115,6 +120,7 @@ Blazor Server (.NET 10) application for tracking event sales with brand-based pr
   ```bash
   dotnet ef migrations add MigrationName --project MySalesTracker.Infrastructure --startup-project MySalesTracker.Web
   ```
+- Rolling back `AddPriceLists` is guarded. The downgrade throws `50010` while any `Events` or `PriceRules` row uses a price list other than BG (0), because dropping the columns would silently discard EU data.
 - To recreate a disposable development database:
   - Stop the app and drop the development database
   - Keep the checked-in migration files and model snapshot

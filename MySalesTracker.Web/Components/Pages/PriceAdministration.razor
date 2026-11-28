@@ -11,6 +11,20 @@
     <h2>Цени</h2>
 </div>
 
+<div class="price-list-tabs" role="tablist" aria-label="Ценова листа">
+    @foreach (var list in PriceListOrder)
+    {
+        <button type="button"
+                role="tab"
+                aria-selected="@(selectedPriceList == list)"
+                class="price-list-tab @(selectedPriceList == list ? "price-list-tab-active" : null)"
+                disabled="@isCreatingProduct"
+                @onclick="() => SelectPriceList(list)">
+            @list.GetDisplayName()
+        </button>
+    }
+</div>
+
 <div class="brand-tabs" role="tablist" aria-label="Марка">
     @foreach (var brand in BrandOrder)
     {
@@ -204,6 +218,13 @@ else
                             }
                         </div>
                     }
+                    else
+                    {
+                        <div class="free-price-state">
+                            <span class="bi bi-slash-circle" aria-hidden="true"></span>
+                            Няма цени в листа @selectedPriceList.GetDisplayName()
+                        </div>
+                    }
 
                 }
             </article>
@@ -213,11 +234,18 @@ else
 
 @code {
     private static readonly Brand[] BrandOrder = [Brand.Totem, Brand.Ceramics, Brand.Candles];
+    private static readonly PriceList[] PriceListOrder = [PriceList.BG, PriceList.EU];
     private static readonly CultureInfo Bg = CultureInfo.GetCultureInfo("bg-BG");
 
     private List<ProductPricing> products = [];
     private readonly List<EditablePriceRule> editableRules = [];
     private Brand selectedBrand = Brand.Totem;
+    private PriceList selectedPriceList = PriceList.BG;
+    private PriceList editingPriceList = PriceList.BG;
+    private PriceList loadedPriceList = PriceList.BG;
+    private int loadVersion;
+    private int editSession;
+    private bool priceListLoaded;
     private int? editingProductId;
     private bool isLoading = true;
     private bool isSaving;
@@ -239,21 +267,59 @@ else
 
     private async Task LoadProductsAsync()
     {
+        // An older request must never overwrite the state of a newer one.
+        var version = ++loadVersion;
+        var priceList = selectedPriceList;
         isLoading = true;
         pageError = null;
 
+        List<ProductPricing>? loaded = null;
         try
         {
-            products = await PriceRuleSvc.GetProductPricingAsync();
+            loaded = await PriceRuleSvc.GetProductPricingAsync(priceList);
         }
         catch
         {
+            loaded = null;
+        }
+
+        if (version != loadVersion)
+        {
+            return;
+        }
+
+        if (loaded is null)
+        {
+            products = [];
+            priceListLoaded = false;
             pageError = "Цените не можаха да бъдат заредени.";
         }
-        finally
+        else
         {
-            isLoading = false;
+            products = loaded;
+            loadedPriceList = priceList;
+            priceListLoaded = true;
         }
+
+        isLoading = false;
+    }
+
+    private async Task SelectPriceList(PriceList priceList)
+    {
+        if (isCreatingProduct || selectedPriceList == priceList)
+        {
+            return;
+        }
+
+        // The draft belongs to the list it was started in; switching lists discards it.
+        CancelEditing();
+        selectedPriceList = priceList;
+        priceListLoaded = false;
+        products = [];
+        pageMessage = null;
+        pageError = null;
+
+        await LoadProductsAsync();
     }
 
     private void SelectBrand(Brand brand)
@@ -267,7 +333,6 @@ else
         CancelEditing();
         productError = null;
         pageMessage = null;
-        pageError = null;
     }
 
     private void StartAddingProduct()
@@ -320,9 +385,24 @@ else
         await LoadProductsAsync();
     }
 
-    private void StartEditing(ProductPricing product)
+    protected void StartEditing(ProductPricing product)
     {
+        // Only the card that is on screen for the loaded list may open a draft.
+        // Both lists share the ProductId, so the instance has to match.
+        if (!priceListLoaded || loadedPriceList != selectedPriceList)
+        {
+            return;
+        }
+
+        if (!products.Any(visible => ReferenceEquals(visible, product)))
+        {
+            return;
+        }
+
+        editSession++;
+        isSaving = false;
         editingProductId = product.ProductId;
+        editingPriceList = loadedPriceList;
         pageMessage = null;
         pageError = null;
         editorError = null;
@@ -352,6 +432,7 @@ else
 
     private void CancelEditing()
     {
+        editSession++;
         editingProductId = null;
         editorError = null;
         editableRules.Clear();
@@ -392,6 +473,16 @@ else
 
     private async Task SaveChangesAsync(ProductPricing product)
     {
+        // Bind the save to the draft's product and list, not to whatever is selected later.
+        var productId = product.ProductId;
+        var priceList = editingPriceList;
+        var session = editSession;
+
+        if (!priceListLoaded || loadedPriceList != priceList || editingProductId != productId)
+        {
+            return;
+        }
+
         editorError = null;
         var inputs = new List<PriceRuleInput>(editableRules.Count);
 
@@ -408,29 +499,48 @@ else
 
         var confirmed = await JSRuntime.InvokeAsync<bool>(
             "confirm",
-            $"Текущите цени за {product.ProductName} ще бъдат заменени. Да продължа ли?");
+            $"Цените за {product.ProductName} в листа {priceList.GetDisplayName()} ще бъдат заменени. Да продължа ли?");
 
         if (!confirmed)
         {
             return;
         }
 
-        ServiceResult<bool> result;
+        // The draft may have been replaced while the confirmation was open.
+        if (session != editSession)
+        {
+            return;
+        }
+
         isSaving = true;
+        ServiceResult<bool> result;
         try
         {
             result = await PriceRuleSvc.UpdateProductPriceRulesAsync(
-                new UpdateProductPriceRulesRequest(product.ProductId, inputs));
+                new UpdateProductPriceRulesRequest(productId, priceList, inputs));
         }
         catch
         {
-            editorError = "Цените не можаха да бъдат обновени.";
+            if (session == editSession)
+            {
+                isSaving = false;
+                editorError = "Цените не можаха да бъдат обновени.";
+            }
             return;
         }
-        finally
+
+        // A newer draft took over while the write was pending; keep its UI, but show the saved prices.
+        if (session != editSession)
         {
-            isSaving = false;
+            if (result.Success)
+            {
+                ApplySavedRules(productId, priceList, inputs);
+                StateHasChanged();
+            }
+            return;
         }
+
+        isSaving = false;
 
         if (!result.Success)
         {
@@ -441,6 +551,32 @@ else
         CancelEditing();
         pageMessage = result.SuccessMessage;
         await LoadProductsAsync();
+    }
+
+    // The list is already on screen, so patch the saved product instead of reloading over the open draft.
+    private void ApplySavedRules(int productId, PriceList priceList, IReadOnlyList<PriceRuleInput> inputs)
+    {
+        if (loadedPriceList != priceList)
+        {
+            return;
+        }
+
+        var index = products.FindIndex(visible => visible.ProductId == productId);
+        if (index < 0)
+        {
+            return;
+        }
+
+        var rules = inputs
+            .Select((rule, position) => new PriceRuleDetails(
+                rule.Price,
+                Currency.EUR,
+                rule.UnitsPerSale,
+                position + 1,
+                rule.IsDefault))
+            .ToList();
+
+        products[index] = products[index] with { CurrentRules = rules };
     }
 
     private static string FormatPrice(decimal price)

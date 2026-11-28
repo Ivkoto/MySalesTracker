@@ -12,21 +12,22 @@ public sealed class PriceRuleService(
     ILogger<PriceRuleService> logger)
 {
     /// <summary>
-    /// Gets the number of units for a configured product price.
+    /// Gets the number of units for a configured product price in one price list.
     /// </summary>
     /// <param name="productId">The ID of the product.</param>
+    /// <param name="priceList">The price list to read the rule from.</param>
     /// <param name="price">The price to look up.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The configured units, or null when the price is no longer available.</returns>
-    public async Task<int?> GetUnitsForProductAsync(int productId, decimal price, CancellationToken ct = default)
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The configured units, or null when the list has no rule for that price.</returns>
+    public async Task<int?> GetUnitsForProductAsync(int productId, PriceList priceList, decimal price, CancellationToken ct = default)
     {
         try
         {
-            var priceRule = await priceRuleRepository.GetRuleForProductAsync(productId, price, ct);
+            var priceRule = await priceRuleRepository.GetRuleForProductAsync(productId, priceList, price, ct);
 
             if (priceRule is null)
             {
-                logger.LogWarning("No current price rule found for Product {ProductId}, Price {Price}.", productId, price);
+                logger.LogWarning("No {PriceList} price rule found for Product {ProductId}, Price {Price}.", priceList, productId, price);
                 return null;
             }
 
@@ -34,36 +35,41 @@ public sealed class PriceRuleService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get units for Product {ProductId}, Price {Price}", productId, price);
+            logger.LogError(ex, "Failed to get units for Product {ProductId} in {PriceList}, Price {Price}", productId, priceList, price);
             throw;
         }
     }
 
 
     /// <summary>
-    /// Retrieves all price rules from the database.
+    /// Retrieves the price rules of one price list.
     /// </summary>
+    /// <param name="priceList">The price list to read.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
-    /// A list of all <see cref="PriceRule"/> entities. Returns an empty list if an error occurs.
+    /// A list of <see cref="PriceRule"/> entities. Returns an empty list if an error occurs.
     /// </returns>
-    public async Task<List<PriceRule>> GetAllPriceRulesAsync(CancellationToken ct = default)
+    public async Task<List<PriceRule>> GetAllPriceRulesAsync(PriceList priceList, CancellationToken ct = default)
     {
         try
         {
-            return await priceRuleRepository.GetAllPriceRulesAsync(ct);
+            return await priceRuleRepository.GetAllPriceRulesAsync(priceList, ct);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get all price rules.");
+            logger.LogError(ex, "Failed to get {PriceList} price rules.", priceList);
             return [];
         }
     }
 
-    public async Task<List<ProductPricing>> GetProductPricingAsync(CancellationToken ct = default)
+    /// <summary>
+    /// Retrieves every active product with the rules of one price list.
+    /// Products without rules in that list are included with an empty rule set.
+    /// </summary>
+    public async Task<List<ProductPricing>> GetProductPricingAsync(PriceList priceList, CancellationToken ct = default)
     {
         var products = await productRepository.GetActiveProductsWithPriceRulesAsync(ct);
-        return [.. products.Select(MapProductPricing)];
+        return [.. products.Select(product => MapProductPricing(product, priceList))];
     }
 
     public async Task<ServiceResult<bool>> UpdateProductPriceRulesAsync(
@@ -91,6 +97,7 @@ public sealed class PriceRuleService(
             .Select((rule, index) => new PriceRule
             {
                 ProductId = request.ProductId,
+                PriceList = request.PriceList,
                 Price = rule.Price,
                 Currency = Currency.EUR,
                 UnitsPerSale = rule.UnitsPerSale,
@@ -103,6 +110,7 @@ public sealed class PriceRuleService(
         {
             await priceRuleRepository.ReplacePriceRulesAsync(
                 request.ProductId,
+                request.PriceList,
                 priceRules,
                 ct);
 
@@ -110,12 +118,12 @@ public sealed class PriceRuleService(
         }
         catch (InvalidOperationException ex)
         {
-            logger.LogWarning(ex, "Price rules could not be updated for Product {ProductId}", request.ProductId);
+            logger.LogWarning(ex, "Price rules could not be updated for Product {ProductId} in {PriceList}", request.ProductId, request.PriceList);
             return ServiceResult<bool>.FailureResult(ex.Message);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to update price rules for Product {ProductId}", request.ProductId);
+            logger.LogError(ex, "Failed to update price rules for Product {ProductId} in {PriceList}", request.ProductId, request.PriceList);
             return ServiceResult<bool>.FailureResult("Цените не можаха да бъдат обновени.");
         }
     }
@@ -155,9 +163,10 @@ public sealed class PriceRuleService(
         return null;
     }
 
-    private static ProductPricing MapProductPricing(Product product)
+    private static ProductPricing MapProductPricing(Product product, PriceList priceList)
     {
         var currentRules = product.PriceRules
+            .Where(rule => rule.PriceList == priceList)
             .OrderBy(rule => rule.SortOrder)
             .ThenBy(rule => rule.Price)
             .Select(MapPriceRule)
